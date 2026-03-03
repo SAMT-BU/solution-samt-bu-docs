@@ -15,11 +15,22 @@ See the Norwegian version (`_index.nb.md`) for full details. Key entries summari
 
 **Symptom:** Clicking the menu item text for a section with children behaved differently from clicking its arrow icon.
 
-**Root cause:** The click handler in `altinndocs-learn.js` was attached to `.category-icon` (the `<i>` icon inside `<a>`), not to the `<a>` itself. Icon click → handler fires with `return false` → accordion toggle, no navigation. Text click (`<span>`) → no handler → bubbles to `<a>` → navigation.
+**Root cause:** Click handler on `.category-icon` with `return false` → icon click toggled accordion (no navigation), text click bubbled to `<a>` → navigation. Inconsistent.
 
-**Fix:** Changed selector to `#sidebar .dd-item > a`, using `$(this).next('ul')` to find children. Items with children do accordion toggle + `return false`; leaf nodes navigate normally.
+**First attempt (wrong):** Changed selector to `#sidebar .dd-item > a` with `return false` for all `<a>` with children. Consistent arrow behaviour, but blocked navigation to section index pages for all intermediate menu levels.
 
-**Lesson:** Attach click handlers to `<a>`, not to a child element inside it, when you want to intercept all click activity on the link.
+**Final fix:** Kept handler on `.category-icon`, used `e.stopPropagation()` instead:
+```javascript
+jQuery('#sidebar .category-icon').on('click', function(e) {
+    e.stopPropagation();
+    $(this).toggleClass('fa-sort-down fa-caret-right');
+    $(this).closest('li').children('ul').toggle();
+});
+```
+
+Result: arrow click → accordion toggle only; text click → navigates to section index page normally.
+
+**Lesson:** `e.stopPropagation()` on a child element inside `<a>` prevents the click from bubbling to `<a>`, blocking navigation — without applying `return false` to the `<a>` itself. Section pages with children remain navigable via text click.
 
 ---
 

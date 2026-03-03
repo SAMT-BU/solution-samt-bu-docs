@@ -85,22 +85,24 @@ Kronologisk logg over feil og problemer oppdaget og løst under utvikling av SAM
 
 **Symptom:** Klikk på menyteksten for en seksjon med barn (f.eks. «SAMT-BU Docs») ga annen atferd enn klikk på pilen til høyre for samme element.
 
-**Rotårsak:** `altinndocs-learn.js` hadde click-handleren på `.category-icon` (selve `<i>`-ikonet), ikke på hele `<a>`-elementet. Siden ikonet er inne i `<a>`, brukte handleren `$(this).parent().parent().children('ul')` for å nå barna. Med `return false` stoppet klikk på ikonet navigasjon + propagasjon → akkordeon-toggle uten sidelasting. Klikk på `<span>` (teksten) hadde ingen handler → bublet opp til `<a>` → navigerte til ny side.
+**Rotårsak:** `altinndocs-learn.js` hadde click-handleren på `.category-icon` (selve `<i>`-ikonet) med `return false`. Klikk på ikonet → handler + `return false` → akkordeon-toggle, ingen navigasjon. Klikk på teksten (`<span>`) → ingen handler → bublet til `<a>` → navigerte til ny side → inkonsistent atferd.
 
-**Fix:** Endret selektoren fra `#sidebar .category-icon` til `#sidebar .dd-item > a` og brukte `$(this).next('ul')` for å finne barna:
+**Første forsøk (feil):** Endret selektoren til `#sidebar .dd-item > a` med `return false` for alle `<a>` med barn. Dette gav konsistent oppførsel for pilen, men blokkerte navigasjon til seksjonsindeks-sider for ALLE mellomnivåer i menyen.
+
+**Endelig fix:** Beholdt handleren på `.category-icon`, men brukte `e.stopPropagation()` i stedet for `return false`:
 ```javascript
-jQuery('#sidebar .dd-item > a').on('click', function() {
-    var ul = $(this).next('ul');
-    if (ul.length) {
-        $(this).find('.category-icon').toggleClass('fa-sort-down fa-caret-right');
-        ul.toggle();
-        return false;  // kun for elementer med barn
-    }
-    // ingen barn → navigasjon skjer normalt
+jQuery('#sidebar .category-icon').on('click', function(e) {
+    e.stopPropagation();  // forhindrer klikket i å nå <a> → ingen navigasjon
+    $(this).toggleClass('fa-sort-down fa-caret-right');
+    $(this).closest('li').children('ul').toggle();
 });
 ```
 
-**Lærdom:** Ikke sett click-handleren på et child-element inni `<a>` når du vil fange ALL klikkaktivitet på lenken – sett den på `<a>` selv. Leaf-noder (uten `<ul>`-søsken) navigerer fortsatt normalt.
+Resultat:
+- Klikk på pilen → akkordeon-toggle, ingen navigasjon
+- Klikk på teksten → navigerer til seksjonsindeks-siden normalt
+
+**Lærdom:** `e.stopPropagation()` på et child-element inne i `<a>` stopper klikket i å boble opp til `<a>`, og forhindrer dermed navigasjon – uten å bruke `return false` på `<a>` selv. Seksjonssider med barn forblir navigerbare via tekstklikk.
 
 ---
 

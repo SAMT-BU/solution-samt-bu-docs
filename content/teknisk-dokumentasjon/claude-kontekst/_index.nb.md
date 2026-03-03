@@ -96,9 +96,20 @@ Begge paneler bruker samme teknikk: et ekte DOM-element med `position: sticky; b
 
 ### Sidebar-akkordeon (altinndocs-learn.js)
 
-Klikk på menyelementer med barn styres av `jQuery('#sidebar .dd-item > a').on('click', ...)` i `altinndocs-learn.js`. Handleren sjekker om `<a>` har en `<ul>` som neste søsken – hvis ja: akkordeon-toggle + `return false`. Bladnoder (uten `<ul>`) navigerer normalt.
+Klikk på pil-ikonet (`<i class="category-icon">`) styres av `jQuery('#sidebar .category-icon').on('click', ...)` i `altinndocs-learn.js`.
 
-**Kritisk:** Handleren MÅ ligge på `<a>`, ikke på `.category-icon` (`<i>`). Tidligere sto handleren på ikonet → klikk på teksten navigerte (ingen handler), klikk på pilen togglet (return false) → inkonsistent atferd. Se kjente-problemer for detaljer.
+- **Klikk på pilen:** `e.stopPropagation()` forhindrer bobling til `<a>` → ingen navigasjon. Ikonklasse toggles, `<ul>` toggles.
+- **Klikk på teksten (`<span>`):** ingen handler → bobler til `<a>` → navigerer til seksjonsindeks-siden normalt.
+
+```javascript
+jQuery('#sidebar .category-icon').on('click', function(e) {
+    e.stopPropagation();
+    $(this).toggleClass('fa-sort-down fa-caret-right');
+    $(this).closest('li').children('ul').toggle();
+});
+```
+
+**Kritisk:** Bruk `e.stopPropagation()` på ikonet – ikke `return false` på `<a>`. Å sette `return false` på `<a>` for alle elementer med barn blokkerer navigasjon til seksjonsindeks-sider. Se kjente-problemer for full historikk.
 
 ### theme.css-feller å kjenne
 

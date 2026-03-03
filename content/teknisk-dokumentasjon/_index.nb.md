@@ -10,12 +10,6 @@ Denne siden dokumenterer hva som er «under panseret» i SAMT-BU-plattformen. M�
 ## Innhold
 
 - **Kjente problemer og løsninger** – buglogg med symptom, rotårsak og fix
-- **Utviklernotater og Claude-kontekst** – arkitekturbeslutninger, konvensjoner og kontekst for nye utviklere og AI-assistenter
+- **Utviklernotater og Claude-kontekst** – arkitekturbeslutninger, konvensjoner, theme.css-feller og kontekst for nye utviklere og AI-assistenter
 
-## Planlagt innhold (under utarbeidelse)
-
-- **Hugo-arkitektur** – tema (submodule), konfigurasjon, tospråklig oppsett, layout-modell
-- **Decap CMS** – portal-struktur, OAuth-flyt, konfigurasjon, i18n-håndtering
-- **Hugo Modules** – innholdsmoduler, monterings-mønster, Go-modul-konfigurasjon
-- **CI/CD-pipeline** – GitHub Actions-workflow, inject-lastmod, UUID-håndtering
-- **Cloudflare Worker** – OAuth-proxy, deploy, vedlikehold
+Emner som er dekket i Utviklernotater: Hugo-arkitektur, tema (submodule), 3-kolonne layout, Decap CMS, Hugo Modules, CI/CD-pipeline, Cloudflare Worker OAuth-proxy, søkesystem.

@@ -29,6 +29,60 @@ Kronologisk logg over feil og problemer oppdaget og løst under utvikling av SAM
 
 ---
 
+## ✅ LØST 2026-03-03: Sidebar-scrollbar (venstre panel)
+
+**Symptom:** Synlig scrollbar i venstre kolonne (`#sidebar`). Dukket opp selv om innholdet ikke fylte skjermen vertikalt.
+
+**Rotårsak:** Delvis uklar (JS-innblanding fra Altinn-scripts ble mistenkt, men ikke bekreftet). CSS-reglene `scrollbar-width: none` og `display: none` på `::-webkit-scrollbar` var ikke sterke nok alene.
+
+**Fix:**
+1. CSS i `custom-head.html`: la til `!important` på `scrollbar-width: none`, utvidet webkit-scrollbar-regel til å dekke alle descendants (`#sidebar *::-webkit-scrollbar`), og la til `!important` på `.highlightable`-override.
+2. JS-fallback i `footer.html`: `requestAnimationFrame` som etter sidelasting fjerner eventuelle inline `overflow`/`height`-stiler fra `.highlightable` (i tilfelle Altinn-scripts setter disse dynamisk).
+
+**Lærdom:** For robuste scrollbar-skjulinger: bruk `!important`, dekk både elementet og alle children med webkit-regel, og kombiner med JS-fallback for å håndtere dynamisk stilsetting.
+
+---
+
+## ✅ LØST 2026-03-03: Sidebar scroll-fade viste solid hvit blokk
+
+**Symptom:** Det hvite fader-feltet nederst i venstre panel skjulte siste linje helt (solid hvit), i motsetning til høyre panel (TOC) der tekst skinner gjennom (opacity-gradient).
+
+**Rotårsak:** Sidebar-faden brukte `#sidebar::after` (pseudo-element på scroll-containeren), mens TOC-faden brukte et ekte DOM-element inne i scroll-containeren. `position: sticky; bottom: 0` på et pseudo-element som er direkte barn av scroll-containeren oppfører seg annerledes enn på et element inne i innholdsstrømmen – gir solid blokk i stedet for overlappende gradient.
+
+**Fix:** Bytte til samme teknikk som TOC:
+1. `menu.html`: la til `<div class="sidebar-scroll-fade hidden"></div>` som siste element inne i `.highlightable`
+2. `custom-head.html`: erstattet `#sidebar::after`-regler med `.sidebar-scroll-fade`-regler (identisk med `.toc-scroll-fade`)
+3. `footer.html`: oppdaterte JS til å toggle `.hidden` på `.sidebar-scroll-fade` i stedet for `.fade-hidden` på `#sidebar`
+
+**Lærdom:** For scroll-fade inne i en scroll-container: bruk alltid et ekte DOM-element med `position: sticky; bottom: 0` plassert *inne i* innholdsstrømmen – ikke `::after` på containeren selv.
+
+---
+
+## ✅ LØST 2026-03-03: «Endre denne siden i GitHub»-lenke for langt ned i midtpanel
+
+**Symptom:** Stor tom sone mellom innholdet i midtpanelet og «Endre denne siden i GitHub»-lenken nederst til høyre.
+
+**Rotårsak (1):** `theme.css` definerer `#top-github-link { position: relative; top: 50%; transform: translateY(-50%) }` – en teknikk fra det opprinnelige temaet for å sentrere lenken vertikalt. I vår 3-kolonne-layout der `#body` er en høy scrollbar kolonne, dytte dette lenken ~50% av panelets høyde ned fra sin naturlige plassering.
+
+**Rotårsak (2):** `.adocs-content` hadde `padding-bottom: 36px` og `margin-bottom: 12px` fra theme.css, pluss `#top-github-link` med `margin-top: 24px` og `padding-top: 12px` – tilsammen ~84px mellomrom.
+
+**Fix i `custom-head.html`:**
+```css
+#top-github-link {
+  position: static !important;
+  top: auto !important;
+  transform: none !important;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.adocs-content {
+  padding-bottom: 12px !important;
+  margin-bottom: 4px !important;
+}
+```
+
+---
+
 ## ✅ DELVIS LØST 2026-03-03: Altinn-scripts + dropdown-feil (jQuery defer-kaskade)
 
 **Symptomer (nå løst):**
@@ -44,32 +98,9 @@ Kronologisk logg over feil og problemer oppdaget og løst under utvikling av SAM
 1. `footer.html`: Lagt til `defer` på `altinninfoportal.js`, `altinndocs.js`, `altinndocs-learn.js`
 2. `custom-footer.html`: Konvertert fra jQuery til vanilla JS (IIFE med direkte DOM-tilgang)
 
-**Gjenstår:** Sidebar-scrollbar (se neste oppføring). Scroll-fade er ikke verifisert etter fix.
+**Gjenstår:** Ytelsesproblem (søk-defer, se øverst).
 
-**Lærdom:** Når jQuery er `defer`, MÅ alle jQuery-avhengige externe scripts ha `defer`. Inline scripts må skrives om til vanilla JS.
-
----
-
-## 🔴 ÅPEN 2026-03-03: Sidebar-scrollbar (venstre panel)
-
-**Symptom:** Synlig scrollbar i venstre kolonne (`#sidebar`). Dukker opp selv om innholdet ikke fyller skjermen vertikalt («for tidlig»).
-
-**Bekreftet:** Problemet eksisterer i alle testede tilstander – predaterer alle endringer gjort 2026-03-03. Verifisert ved lokal test på commit `74f2c31`.
-
-**Forsøkte CSS-fixes (ingen virket):**
-- `scrollbar-width: none !important` på `#sidebar`
-- `display: none !important; width: 0 !important` på `#sidebar::-webkit-scrollbar`
-- `overflow: visible !important` + `height: auto !important` på `#sidebar .highlightable`
-- Samme regler på `#sidebar .highlightable::-webkit-scrollbar`
-
-**Mistanke:** `altinndocs-learn.js`, når det nå kjøres korrekt (med jQuery tilgjengelig via defer), resetter `overflow`-property via JavaScript etter at CSS er satt. Inline style overstyrer stylesheet-regler.
-
-**Neste steg:**
-1. Åpne DevTools → Inspect `#sidebar` og `.highlightable` → sjekk hvilken regel som faktisk vinner
-2. Sjekk om `altinndocs-learn.js` setter `style="overflow: auto"` direkte på elementet
-3. Hvis JS-årsak: overstyr med `el.style.overflow = ''` etter at altinn-script kjører, eller patch altinn-script
-
-**Filer:** `themes/hugo-theme-samt-bu/layouts/partials/custom-head.html`, muligens `altinndocs-learn.js`
+**Lærdom:** Når jQuery har `defer`, MÅ alle jQuery-avhengige externe scripts ha `defer`. Inline scripts må skrives om til vanilla JS.
 
 ---
 

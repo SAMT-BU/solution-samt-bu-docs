@@ -78,8 +78,28 @@ Tilpasninger gjøres alltid i `custom-head.html`.
 - **Venstre (#sidebar):** 20% / maks 260px – nav
 - **Midten (#body):** flex 1 – innhold
 - **Høyre (#page-toc):** 18% / maks 240px – TOC
-- Scrollbarer skjult (`scrollbar-width: none`)
+- Scrollbarer skjult (`scrollbar-width: none !important` + `#sidebar *::-webkit-scrollbar { display: none !important }`)
 - Collapsible: toggle-knapper i heading-rad, restore-tabs i `<body>`, tilstand i localStorage
+
+### Scroll-fade (venstre og høyre panel)
+
+Begge paneler bruker samme teknikk: et ekte DOM-element med `position: sticky; bottom: 0` plassert *inne i* innholdsstrømmen (ikke `::after` på containeren).
+
+- **TOC:** `<div class="toc-scroll-fade">` som siste element i `#page-toc`
+- **Sidebar:** `<div class="sidebar-scroll-fade hidden">` som siste element i `.highlightable` (i `menu.html`)
+- JS (footer.html) toggles `.hidden`-klassen basert på scroll-posisjon og overflow
+
+**OBS:** `::after` på en scroll-container fungerer IKKE riktig med `position: sticky` – gir solid blokk, ikke gradient-overlay.
+
+### theme.css-feller å kjenne
+
+Noen regler i `theme.css` er designet for det opprinnelige ikke-scrollende layoutet og må overstyres:
+
+| Regel | Problem | Override i custom-head.html |
+|-------|---------|------------------------------|
+| `#top-github-link { top: 50%; transform: translateY(-50%) }` | Dytter GitHub-lenken halvveis ned i #body | `position: static !important; top: auto !important; transform: none !important` |
+| `.adocs-content { padding-bottom: 36px; margin-bottom: 12px }` | Unødvendig stor avstand under innhold | `padding-bottom: 12px !important; margin-bottom: 4px !important` |
+| `.highlightable { overflow: auto; height: 100% }` | .highlightable vil scroll separat | `overflow: visible !important; height: auto !important` |
 
 ---
 

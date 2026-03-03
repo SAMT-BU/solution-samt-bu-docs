@@ -9,6 +9,28 @@ Kronologisk logg over feil og problemer oppdaget og løst under utvikling av SAM
 
 ---
 
+## 🔴 ÅPEN 2026-03-03: Scrollbarer synlige + scroll-fade borte + ytelsesforsinkelse
+
+**Symptomer (se skjermbilde 2026-03-03):**
+- Venstre kolonne (#sidebar): synlig scrollbar, scroll-fade (gradient) virker ikke
+- Midtpanel (#body): uventet scrollbar synlig, stor tom sone under innhold
+- Ytelse: merkbar forsinkelse i oppdatering av skjermbildet er tilbake
+
+**Mistenkt rotårsak:** `footer.html` inneholder JS for scroll-fade, scroll-spy (TOC), sidebar-toggle og localStorage-persistens. Disse scriptene kjøres synkront under HTML-parsing (de er i `<body>`, ikke defer). jQuery ble lagt til `defer` i `header.html` (2026-02-26). Nøyaktig samme problem som med `search.js` – `$` er undefined når `footer.html`-scriptene kjøres. Feilen ble trigget da vi fikset søk (2026-03-02) uten å oppdatere `footer.html`.
+
+**Midtpanel-scrollbar:** Mulig tilleggsårsak – stor vertikal padding/margin under innholdsområdet, "Endre denne siden i github"-lenke havner langt nede. Kan skyldes at footer-JS ikke initialiserer layout korrekt.
+
+**Ytelse:** Sannsynlig konsekvens av at sidebar/layout-JS feiler og forårsaker layout-thrash, eller en separat årsak (Decap CMS-lasting, module-overhead). Skal undersøkes separat.
+
+**Neste steg (ikke gjort ennå):**
+1. Les `themes/hugo-theme-samt-bu/layouts/partials/footer.html` – kartlegg alle jQuery-avhengige scripts
+2. Legg til `defer` (eller bruk `DOMContentLoaded`) på disse
+3. Verifiser at scroll-fade, sidebar-toggle og TOC-scroll-spy fortsatt virker
+
+**Fil å fikse:** `themes/hugo-theme-samt-bu/layouts/partials/footer.html`
+
+---
+
 ## 2026-03-02: Søk virket ikke (jQuery defer-konflikt)
 
 **Symptom:** Søkefeltet i headeren aksepterte input, men viste ingen resultater.

@@ -47,7 +47,6 @@ Når brukeren ber om oppdatering av memory/kontekst, eller signaliserer at sesjo
 | `samt-bu-docs` | Hoved-repo – konfigurasjon, innhold, CI/CD | `S:/app-data/github/samt-bu-repos/samt-bu-docs/` |
 | `hugo-theme-samt-bu` | Tema – all presentasjonslogikk (submodule) | `themes/hugo-theme-samt-bu/` |
 | `team-architecture` | Hugo-modul, innhold for arkitektur-teamet | `S:/app-data/github/samt-bu-repos/team-architecture/` |
-| `team-governance` | Hugo-modul, innhold for governance-teamet | `S:/app-data/github/samt-bu-repos/team-governance/` |
 | `team-semantics` | Hugo-modul, innhold for semantikk-teamet | `S:/app-data/github/samt-bu-repos/team-semantics/` |
 | `samt-bu-drafts` | Hugo-modul, utkast og innspill | `S:/app-data/github/samt-bu-repos/samt-bu-drafts/` |
 
@@ -129,20 +128,21 @@ Innhold fra externe repoer monteres via `[module.imports]` i `hugo.toml`.
 
 | Modul | Montert under |
 |-------|---------------|
-| `github.com/SAMT-BU/team-architecture` | `content/teams/team-architecture/` |
-| `github.com/SAMT-BU/team-governance` | `content/teams/team-governance/` |
-| `github.com/SAMT-BU/team-semantics` | `content/teams/team-semantics/` |
-| `github.com/SAMT-BU/samt-bu-drafts` | `content/utkast/` |
-| `github.com/SAMT-BU/solution-samt-bu-docs` | `content/loesninger/cms-loesninger/samt-bu-docs/` |
+| `github.com/SAMT-X/team-architecture` | `content/teams/team-architecture/` |
+| `github.com/SAMT-X/team-semantics` | `content/teams/team-semantics/` |
+| `github.com/SAMT-X/samt-bu-drafts` | `content/utkast/` |
+| `github.com/SAMT-X/solution-samt-bu-docs` | `content/loesninger/cms-loesninger/samt-bu-docs/` |
 
 **Oppdatere en modul:**
 ```bash
-hugo mod get github.com/SAMT-BU/<navn>@latest
+hugo mod get github.com/SAMT-X/<navn>@latest
 ```
 
 **Legge til ny modul:** Se CLAUDE.md – "Legge til ny modul".
 
-**Tidsstempler (lastmod):** Modulinnhold leveres som zip → ingen git-historikk → `Sist endret` vises ikke lokalt. CI løser dette via `inject-lastmod.py` + `HUGO_MODULE_REPLACEMENTS`. Kun `team-architecture` og `samt-bu-drafts` er med i CI-replacement per nå – `team-governance` og `team-semantics` mangler dette.
+**Tidsstempler (lastmod):** Modulinnhold leveres som zip → ingen git-historikk → `Sist endret` vises ikke lokalt. CI løser dette via `inject-lastmod.py` + `HUGO_MODULE_REPLACEMENTS`. Kun `team-architecture` og `samt-bu-drafts` er med i CI-replacement per nå.
+
+**Org-migrering (2026-03-03):** Alle repos flyttet fra `SAMT-BU` → `SAMT-X`. Ved `hugo mod get @latest` etter org-bytte: fjern `require`-blokken i go.mod manuelt og kjør `GONOSUMDB=* GOPROXY=direct hugo mod tidy` – ikke `hugo mod get`, da dette feiler mot gammel pinnet versjon med feil modul-sti.
 
 ---
 
@@ -224,7 +224,7 @@ Basert på `path.Dir .File.Path` (normalisert, unngår Windows-backslash-problem
 | `arkitektur/` | 30 | lokal |
 | `loesninger/` | 40 | lokal |
 | `rammeverk/` | 50 | lokal |
-| `informasjonsmodeller/` | 60 | lokal |
+| `arkitektur/informasjonsarkitektur/` | 30 (sub) | lokal |
 | `innsikt/` | 70 | lokal placeholder |
 | `teams/` | 80 | lokal + moduler |
 | `utkast/` | 90 | modul samt-bu-drafts |

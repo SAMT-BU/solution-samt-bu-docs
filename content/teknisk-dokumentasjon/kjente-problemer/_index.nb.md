@@ -9,25 +9,22 @@ Kronologisk logg over feil og problemer oppdaget og løst under utvikling av SAM
 
 ---
 
-## 🔴 ÅPEN 2026-03-03: Scrollbarer synlige + scroll-fade borte + ytelsesforsinkelse
+## ✅ LØST 2026-03-03: Scrollbarer synlige + scroll-fade borte + ytelsesforsinkelse
 
-**Symptomer (se skjermbilde 2026-03-03):**
-- Venstre kolonne (#sidebar): synlig scrollbar, scroll-fade (gradient) virker ikke
+**Symptomer:**
+- Venstre kolonne (#sidebar): synlig scrollbar, scroll-fade (gradient) virket ikke
 - Midtpanel (#body): uventet scrollbar synlig, stor tom sone under innhold
-- Ytelse: merkbar forsinkelse i oppdatering av skjermbildet er tilbake
+- Ytelse: merkbar forsinkelse
 
-**Mistenkt rotårsak:** `footer.html` inneholder JS for scroll-fade, scroll-spy (TOC), sidebar-toggle og localStorage-persistens. Disse scriptene kjøres synkront under HTML-parsing (de er i `<body>`, ikke defer). jQuery ble lagt til `defer` i `header.html` (2026-02-26). Nøyaktig samme problem som med `search.js` – `$` er undefined når `footer.html`-scriptene kjøres. Feilen ble trigget da vi fikset søk (2026-03-02) uten å oppdatere `footer.html`.
+**Rotårsak:** `altinninfoportal.js`, `altinndocs.js` og `altinndocs-learn.js` bruker alle jQuery (`$()`) direkte – uten `$(document).ready()`. De ble lastet synkront (uten `defer`), men jQuery hadde `defer`. Resultatet: `$` er undefined → alle tre scripts feiler. Spesielt kritisk: `altinndocs.js` linje 2 kjørte `$('.js-moveChildrenFrom').insertAfter('.js-moveChildrenTo')` øyeblikkelig – DOM-manipulasjon mislyktes → stor tom sone under innhold.
 
-**Midtpanel-scrollbar:** Mulig tilleggsårsak – stor vertikal padding/margin under innholdsområdet, "Endre denne siden i github"-lenke havner langt nede. Kan skyldes at footer-JS ikke initialiserer layout korrekt.
+`custom-footer.html` brukte `$(document).ready(...)` for dropdown-togglerne (språk, Innhold, Endre). Inline scripts kan ikke ha `defer` → `$` undefined → dropdowns virket ikke.
 
-**Ytelse:** Sannsynlig konsekvens av at sidebar/layout-JS feiler og forårsaker layout-thrash, eller en separat årsak (Decap CMS-lasting, module-overhead). Skal undersøkes separat.
+**Fix:**
+1. `footer.html`: Lagt til `defer` på `altinninfoportal.js`, `altinndocs.js`, `altinndocs-learn.js`
+2. `custom-footer.html`: Konvertert fra jQuery til vanilla JS (IIFE med direkte DOM-tilgang)
 
-**Neste steg (ikke gjort ennå):**
-1. Les `themes/hugo-theme-samt-bu/layouts/partials/footer.html` – kartlegg alle jQuery-avhengige scripts
-2. Legg til `defer` (eller bruk `DOMContentLoaded`) på disse
-3. Verifiser at scroll-fade, sidebar-toggle og TOC-scroll-spy fortsatt virker
-
-**Fil å fikse:** `themes/hugo-theme-samt-bu/layouts/partials/footer.html`
+**Lærdom:** Når jQuery er `defer`, MÅ alle jQuery-avhengige scripts enten ha `defer` (externe filer) eller bruke vanilla JS (inline scripts). Sjekk ALLTID altinn-scripts og custom-footer.html ved jQuery-relaterte endringer.
 
 ---
 

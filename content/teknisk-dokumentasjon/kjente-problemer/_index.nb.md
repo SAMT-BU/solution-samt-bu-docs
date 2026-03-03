@@ -81,9 +81,32 @@ Kronologisk logg over feil og problemer oppdaget og løst under utvikling av SAM
 
 ---
 
-## ✅ DELVIS LØST 2026-03-03: Altinn-scripts + dropdown-feil (jQuery defer-kaskade)
+## ✅ LØST 2026-03-03: Sidebar-meny – inkonsistent klikkatferd (tekst vs. pil)
 
-**Symptomer (nå løst):**
+**Symptom:** Klikk på menyteksten for en seksjon med barn (f.eks. «SAMT-BU Docs») ga annen atferd enn klikk på pilen til høyre for samme element.
+
+**Rotårsak:** `altinndocs-learn.js` hadde click-handleren på `.category-icon` (selve `<i>`-ikonet), ikke på hele `<a>`-elementet. Siden ikonet er inne i `<a>`, brukte handleren `$(this).parent().parent().children('ul')` for å nå barna. Med `return false` stoppet klikk på ikonet navigasjon + propagasjon → akkordeon-toggle uten sidelasting. Klikk på `<span>` (teksten) hadde ingen handler → bublet opp til `<a>` → navigerte til ny side.
+
+**Fix:** Endret selektoren fra `#sidebar .category-icon` til `#sidebar .dd-item > a` og brukte `$(this).next('ul')` for å finne barna:
+```javascript
+jQuery('#sidebar .dd-item > a').on('click', function() {
+    var ul = $(this).next('ul');
+    if (ul.length) {
+        $(this).find('.category-icon').toggleClass('fa-sort-down fa-caret-right');
+        ul.toggle();
+        return false;  // kun for elementer med barn
+    }
+    // ingen barn → navigasjon skjer normalt
+});
+```
+
+**Lærdom:** Ikke sett click-handleren på et child-element inni `<a>` når du vil fange ALL klikkaktivitet på lenken – sett den på `<a>` selv. Leaf-noder (uten `<ul>`-søsken) navigerer fortsatt normalt.
+
+---
+
+## ✅ LØST 2026-03-03: Altinn-scripts + dropdown-feil (jQuery defer-kaskade)
+
+**Symptomer (løst):**
 - Stor tom sone under innholdet i midtpanel
 - Dropdowns (språk, Innhold, Endre) virket ikke
 - Scroll-fade og sidebar-toggle mislyktes
@@ -95,8 +118,6 @@ Kronologisk logg over feil og problemer oppdaget og løst under utvikling av SAM
 **Fix:**
 1. `footer.html`: Lagt til `defer` på `altinninfoportal.js`, `altinndocs.js`, `altinndocs-learn.js`
 2. `custom-footer.html`: Konvertert fra jQuery til vanilla JS (IIFE med direkte DOM-tilgang)
-
-**Gjenstår:** Ytelsesproblem (søk-defer, se øverst).
 
 **Lærdom:** Når jQuery har `defer`, MÅ alle jQuery-avhengige externe scripts ha `defer`. Inline scripts må skrives om til vanilla JS.
 

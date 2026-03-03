@@ -61,6 +61,7 @@ Når brukeren ber om oppdatering av memory/kontekst, eller signaliserer at sesjo
 | `themes/hugo-theme-samt-bu/layouts/partials/search.html` | Søkefelt + script-lasting (lunr, horsey, search.js) |
 | `themes/hugo-theme-samt-bu/layouts/partials/edit-switcher.html` | Endre/Edit-dropdown med Decap-deeplink |
 | `themes/hugo-theme-samt-bu/layouts/partials/footer.html` | Scroll-spy, scroll-fade, sidebar-JS |
+| `themes/hugo-theme-samt-bu/static/js/altinndocs-learn.js` | Sidebar-akkordeon, clipboard, keyboard-nav |
 | `themes/hugo-theme-samt-bu/layouts/index.json` | JSON-output-template for søkeindeks |
 | `hugo.toml` | Konfigurasjon – baseURL, moduler, navSwitcher, språk |
 | `.github/workflows/hugo.yml` | CI/CD – bygg, deploy, inject-lastmod |
@@ -92,6 +93,12 @@ Begge paneler bruker samme teknikk: et ekte DOM-element med `position: sticky; b
 - JS (footer.html) toggles `.hidden`-klassen basert på scroll-posisjon og overflow
 
 **OBS:** `::after` på en scroll-container fungerer IKKE riktig med `position: sticky` – gir solid blokk, ikke gradient-overlay.
+
+### Sidebar-akkordeon (altinndocs-learn.js)
+
+Klikk på menyelementer med barn styres av `jQuery('#sidebar .dd-item > a').on('click', ...)` i `altinndocs-learn.js`. Handleren sjekker om `<a>` har en `<ul>` som neste søsken – hvis ja: akkordeon-toggle + `return false`. Bladnoder (uten `<ul>`) navigerer normalt.
+
+**Kritisk:** Handleren MÅ ligge på `<a>`, ikke på `.category-icon` (`<i>`). Tidligere sto handleren på ikonet → klikk på teksten navigerte (ingen handler), klikk på pilen togglet (return false) → inkonsistent atferd. Se kjente-problemer for detaljer.
 
 ### theme.css-feller å kjenne
 
@@ -172,13 +179,9 @@ Basert på `path.Dir .File.Path` (normalisert, unngår Windows-backslash-problem
 - **JS:** `themes/hugo-theme-samt-bu/static/js/search.js`
 - **`baseurl`-variabel:** Settes som inline script i `search.html` fra `{{.Site.BaseURL}}`
 
-**Lazy-loading (implementert 2026-03-03 på `local-fixes`):**
+**Lazy-loading (implementert og deployet 2026-03-03):**
 
 `initLunr()` kalles ikke ved sidelasting. Søkeindeksen hentes (via `$.getJSON()`) kun første gang brukeren fokuserer søkefeltet (`$.one("focus", initLunr)`). Flaggene `searchIndexLoading`/`searchIndexLoaded` forhindrer dobbelthenting. Alle search-scripts har `defer` → rekkefølgegaranti mot jQuery (som også har `defer`) er ivaretatt.
-
-**Nåværende tilstand (2026-03-03):**
-- Online (`main`): eager JSON-fetch ved sidelasting → ytelsesproblem. **Ikke oppdatert ennå.**
-- Lokalt (`local-fixes`-branch): lazy-load implementert, `defer` på alle scripts → søk virker + god ytelse ✅
 
 ---
 

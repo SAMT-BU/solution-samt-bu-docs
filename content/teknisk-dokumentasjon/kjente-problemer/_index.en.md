@@ -11,6 +11,18 @@ See the Norwegian version (`_index.nb.md`) for full details. Key entries summari
 
 ---
 
+## ✅ 2026-03-03: Sidebar menu – inconsistent click behaviour (text vs. arrow)
+
+**Symptom:** Clicking the menu item text for a section with children behaved differently from clicking its arrow icon.
+
+**Root cause:** The click handler in `altinndocs-learn.js` was attached to `.category-icon` (the `<i>` icon inside `<a>`), not to the `<a>` itself. Icon click → handler fires with `return false` → accordion toggle, no navigation. Text click (`<span>`) → no handler → bubbles to `<a>` → navigation.
+
+**Fix:** Changed selector to `#sidebar .dd-item > a`, using `$(this).next('ul')` to find children. Items with children do accordion toggle + `return false`; leaf nodes navigate normally.
+
+**Lesson:** Attach click handlers to `<a>`, not to a child element inside it, when you want to intercept all click activity on the link.
+
+---
+
 ## ✅ 2026-03-03: Performance issue – search index loaded at page load
 
 **Symptom:** Noticeable latency on every page load.

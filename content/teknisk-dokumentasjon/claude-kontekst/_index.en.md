@@ -32,7 +32,7 @@ Two levels of persistent context:
 - **CSS layers:** `designsystem.css` → `theme.css` → `custom-head.html` (last wins)
 - **Presentation vs. content:** All presentation logic in `hugo-theme-samt-bu` submodule; content repo contains only `hugo.toml`, `content/`, CI scripts
 - **Hugo Modules:** Team repos mount their content into `content/teams/<team>/`; no separate pilot repos
-- **Search:** Lunr.js + Horsey.js; all search scripts must have `defer` (see [Known issues](../kjente-problemer/))
+- **Search:** Lunr.js + Horsey.js; all search scripts have `defer`; index is lazy-loaded on first focus of the search field (see [Known issues](../kjente-problemer/))
 
 ---
 

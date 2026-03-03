@@ -11,6 +11,48 @@ See the Norwegian version (`_index.nb.md`) for full details. Key entries summari
 
 ---
 
+## ✅ 2026-03-03: Performance issue – search index loaded at page load
+
+**Symptom:** Noticeable latency on every page load.
+
+**Root cause:** `search.js` with `defer` called `$.getJSON()` immediately after page load, fetching the entire search index on every page visit.
+
+**Fix:** Lazy-load the index — `initLunr()` is now called only on the first `focus` event on the search field (`$.one("focus", initLunr)`). Flags `searchIndexLoading`/`searchIndexLoaded` prevent double-fetching. All search scripts retain `defer` to preserve execution order relative to jQuery.
+
+**Lesson:** Use `$.one("focus", initFn)` to defer heavy initialisation until the user actually interacts with the feature.
+
+---
+
+## ✅ 2026-03-03: Sidebar scrollbar visible
+
+**Fix:** Added `!important` to `scrollbar-width: none`, extended webkit rule to cover all descendants (`#sidebar *::-webkit-scrollbar`), and added a JS fallback in `footer.html` to clear inline `overflow`/`height` styles set by Altinn scripts.
+
+---
+
+## ✅ 2026-03-03: Scroll-fade showed solid white block in sidebar
+
+**Root cause:** Used `#sidebar::after` (pseudo-element on scroll container). `position: sticky` on a pseudo-element behaves differently — produces a solid block instead of a gradient overlay.
+
+**Fix:** Replaced with a real DOM element (`<div class="sidebar-scroll-fade hidden">`) inside `.highlightable`, matching the technique already used for the TOC fade.
+
+---
+
+## ✅ 2026-03-03: GitHub edit link displaced far down in centre panel
+
+**Root cause:** `theme.css` sets `#top-github-link { top: 50%; transform: translateY(-50%) }`, pushing the link ~50% of the panel height below its natural position.
+
+**Fix:** Override in `custom-head.html`: `position: static !important; top: auto !important; transform: none !important`.
+
+---
+
+## ✅ 2026-03-03: Dropdowns and JS broken when jQuery has `defer`
+
+**Root cause:** Altinn scripts (`altinndocs.js` etc.) use `$()` directly without `.ready()`. When jQuery was `defer` but these scripts were synchronous, `$` was undefined and DOM manipulation failed silently. `custom-footer.html` used `$(document).ready()` — invalid in an inline script when jQuery is deferred.
+
+**Fix:** Added `defer` to all Altinn scripts. Rewrote `custom-footer.html` from jQuery to vanilla JS.
+
+---
+
 ## 2026-03-02: Search not working (jQuery defer conflict)
 
 **Symptom:** Search field accepted input but returned no results.

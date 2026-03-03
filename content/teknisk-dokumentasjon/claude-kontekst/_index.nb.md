@@ -172,18 +172,13 @@ Basert på `path.Dir .File.Path` (normalisert, unngår Windows-backslash-problem
 - **JS:** `themes/hugo-theme-samt-bu/static/js/search.js`
 - **`baseurl`-variabel:** Settes som inline script i `search.html` fra `{{.Site.BaseURL}}`
 
-**⚠️ Kjent spenning – to motstridende krav:**
+**Lazy-loading (implementert 2026-03-03 på `local-fixes`):**
 
-| Krav | Konsekvens |
-|------|-----------|
-| `defer` på search-scripts → søk virker (jQuery tilgjengelig) | `$.getJSON()` henter søkeindeks ved sidelasting → **ytelsesproblem** |
-| Ingen `defer` på search-scripts → god ytelse | `$` ikke tilgjengelig → søk virker ikke |
-
-**Anbefalt løsning (ikke implementert):** Lazy-load søkeindeksen i `search.js` – hent JSON kun når brukeren fokuserer søkefeltet. Da kan scripts ha `defer` uten at indeksen lastes ved sidelasting.
+`initLunr()` kalles ikke ved sidelasting. Søkeindeksen hentes (via `$.getJSON()`) kun første gang brukeren fokuserer søkefeltet (`$.one("focus", initLunr)`). Flaggene `searchIndexLoading`/`searchIndexLoaded` forhindrer dobbelthenting. Alle search-scripts har `defer` → rekkefølgegaranti mot jQuery (som også har `defer`) er ivaretatt.
 
 **Nåværende tilstand (2026-03-03):**
-- Online: search-scripts har `defer` → søk virker, men ytelsesproblem
-- Lokalt (`local-fixes`-branch): search-defer revertert → god ytelse, søk virker ikke
+- Online (`main`): eager JSON-fetch ved sidelasting → ytelsesproblem. **Ikke oppdatert ennå.**
+- Lokalt (`local-fixes`-branch): lazy-load implementert, `defer` på alle scripts → søk virker + god ytelse ✅
 
 ---
 

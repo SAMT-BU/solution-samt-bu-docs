@@ -17,12 +17,30 @@ Denne siden er skrevet for både menneskelige utviklere og for AI-assistenten Cl
 
 Claude Code bruker to nivåer for persistent kontekst:
 
-| Fil | Rolle | Grense |
-|-----|-------|--------|
-| `C:\Users\Win11_local\.claude\projects\...\memory\MEMORY.md` | Automatisk lastet ved sesjonstart – kompakt indeks og kritiske "aldri glem"-punkter | 200 linjer |
-| `content/loesninger/.../teknisk-dokumentasjon/` | Canonical kilde – leses eksplisitt ved behov, ingen linjegrense, versjonskontrollert i git | Ingen |
+| Nivå | Fil | Rolle | Grense |
+|------|-----|-------|--------|
+| 1 | `MEMORY.md` (se stier under) | Auto-lastet ved sesjonstart – kompakt indeks og kritiske «aldri glem»-punkter | 200 linjer |
+| 2 | `claude-kontekst/_index.nb.md` (denne filen) | Canonical kilde – leses eksplisitt ved behov, ingen linjegrense, versjonskontrollert i git | Ingen |
 
 **Konvensjon:** Detaljer hører hjemme her (i repo). `MEMORY.md` peker hit. Ingenting viktig trimmes bort – det flyttes hit i stedet.
+
+### Memory-mapper og topic-filer
+
+Claude Code oppretter én memory-mappe per prosjektnøkkel (avledet av arbeidskatalog). Prosjektet har to aktive mapper fordi arbeidskatalogen ble endret ved repo-migrering:
+
+| Arbeidskatalog | Memory-mappe |
+|----------------|--------------|
+| `S:\app-data\github\samt-bu-repos\samt-bu-docs\` *(gammel)* | `C:\Users\Win11_local\.claude\projects\S--app-data-github-samt-bu-repos-samt-bu-docs\memory\` |
+| `S:\app-data\github\samt-x-repos\samt-bu-docs\` *(aktiv)* | `C:\Users\Win11_local\.claude\projects\S--app-data-github-samt-x-repos-samt-bu-docs\memory\` |
+
+**Bruk alltid den aktive mappen** (`samt-x-repos`). Den gamle beholdes som historisk referanse.
+
+Filer i aktiv memory-mappe:
+
+| Fil | Innhold |
+|-----|---------|
+| `MEMORY.md` | Auto-lastet indeks – pekere, git-status, kritiske punkter |
+| `cms-routing.md` | Detaljert rutinglogikk for edit-switcher (fire grener, slug-beregning, sjekkliste for ny modul) |
 
 ### Sesjonsavslutning – alltid gjør dette
 

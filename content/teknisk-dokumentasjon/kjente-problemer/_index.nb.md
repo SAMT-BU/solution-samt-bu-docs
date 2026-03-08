@@ -176,6 +176,29 @@ git push
 
 ---
 
+## ⚠️ ULØST: solution-samt-bu-docs mangler HUGO_MODULE_REPLACEMENTS i CI
+
+**Symptom:** Nytt innhold pushet til `solution-samt-bu-docs` vises ikke på nettstedet selv etter at CI-rebuild kjører. Kryssrepo-triggering fungerer (rebuild trigges), men Hugo bruker gammel, pinnet versjon av modulen.
+
+**Rotårsak:** `samt-bu-docs/.github/workflows/hugo.yml` setter `HUGO_MODULE_REPLACEMENTS` kun for `team-architecture` og `samt-bu-drafts`. Disse modulene sjekkes ut lokalt i CI og Hugo bruker den lokale klonen (alltid siste commit). For `solution-samt-bu-docs` skjer ingen lokal kloning – Hugo bruker versjonen pinnet i `go.mod`, som ikke oppdateres automatisk.
+
+**Midlertidig workaround:** Etter push til `solution-samt-bu-docs`, kjør manuelt i `samt-bu-docs`:
+```bash
+GONOSUMDB=* GOPROXY=direct hugo mod get github.com/SAMT-X/solution-samt-bu-docs@latest
+git add go.mod go.sum
+git commit -m "Oppdater solution-samt-bu-docs-modul"
+git push
+```
+
+**Permanent løsning (ikke implementert):** Legge `solution-samt-bu-docs` inn i `HUGO_MODULE_REPLACEMENTS` i `hugo.yml`, på samme måte som `team-architecture` og `samt-bu-drafts`. Dette innebærer:
+1. Ny `actions/checkout`-blokk for `solution-samt-bu-docs` (med `fetch-depth: 0`)
+2. Legge til `github.com/SAMT-X/solution-samt-bu-docs -> ${{ github.workspace }}/.hugo-modules/solution-samt-bu-docs` i `HUGO_MODULE_REPLACEMENTS`
+3. Valgfritt: inkludere repo i `inject-lastmod.py` for korrekte «Sist endret»-tidsstempler
+
+**Avveining:** Endringen er lav risiko og gir automatisk synkronisering – men krever testing av at CI fortsatt bygger korrekt. Beslutningen er utsatt.
+
+---
+
 ## Windows: `git mv` feiler for mapper med mange filer
 
 **Symptom:** `git mv gammel-mappe/ ny-mappe/` feiler med feilmelding om at kildemappen ikke finnes.

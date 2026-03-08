@@ -1,4 +1,5 @@
 ---
+id: d9520a6b-e499-4554-961d-86a7bacc5550
 title: "Synchronisation and Conflict Handling"
 linkTitle: "Synchronisation"
 weight: 20

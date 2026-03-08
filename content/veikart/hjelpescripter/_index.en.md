@@ -1,4 +1,5 @@
 ---
+id: 12f44a07-413c-49f7-b755-895bcdb9d429
 title: "Helper scripts"
 linkTitle: "Helper scripts"
 weight: 40

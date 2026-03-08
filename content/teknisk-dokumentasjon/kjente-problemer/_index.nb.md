@@ -176,26 +176,26 @@ git push
 
 ---
 
-## ⚠️ ULØST: solution-samt-bu-docs mangler HUGO_MODULE_REPLACEMENTS i CI
+## ✅ LØST 2026-03-08: solution-samt-bu-docs manglet HUGO_MODULE_REPLACEMENTS i CI
 
-**Symptom:** Nytt innhold pushet til `solution-samt-bu-docs` vises ikke på nettstedet selv etter at CI-rebuild kjører. Kryssrepo-triggering fungerer (rebuild trigges), men Hugo bruker gammel, pinnet versjon av modulen.
+**Symptom:** Nytt innhold pushet til `solution-samt-bu-docs` viste seg ikke på nettstedet selv etter at CI-rebuild kjørte. Kryssrepo-triggering fungerte (rebuild ble trigget), men Hugo brukte gammel, pinnet versjon av modulen.
 
-**Rotårsak:** `samt-bu-docs/.github/workflows/hugo.yml` setter `HUGO_MODULE_REPLACEMENTS` kun for `team-architecture` og `samt-bu-drafts`. Disse modulene sjekkes ut lokalt i CI og Hugo bruker den lokale klonen (alltid siste commit). For `solution-samt-bu-docs` skjer ingen lokal kloning – Hugo bruker versjonen pinnet i `go.mod`, som ikke oppdateres automatisk.
+**Rotårsak:** `hugo.yml` satte `HUGO_MODULE_REPLACEMENTS` kun for `team-architecture` og `samt-bu-drafts`. For `solution-samt-bu-docs` ble ingen lokal kloning gjort – Hugo brukte versjonen pinnet i `go.mod`.
 
-**Midlertidig workaround:** Etter push til `solution-samt-bu-docs`, kjør manuelt i `samt-bu-docs`:
-```bash
-GONOSUMDB=* GOPROXY=direct hugo mod get github.com/SAMT-X/solution-samt-bu-docs@latest
-git add go.mod go.sum
-git commit -m "Oppdater solution-samt-bu-docs-modul"
-git push
-```
+**Fix (2026-03-08):** `solution-samt-bu-docs` lagt til i alle tre steder i `samt-bu-docs`:
+1. Ny `actions/checkout`-blokk i `hugo.yml`
+2. Lagt til i `HUGO_MODULE_REPLACEMENTS` i `hugo.yml`
+3. Lagt til i `MODULE_PATHS` i `inject-lastmod.py`
 
-**Permanent løsning (ikke implementert):** Legge `solution-samt-bu-docs` inn i `HUGO_MODULE_REPLACEMENTS` i `hugo.yml`, på samme måte som `team-architecture` og `samt-bu-drafts`. Dette innebærer:
-1. Ny `actions/checkout`-blokk for `solution-samt-bu-docs` (med `fetch-depth: 0`)
-2. Legge til `github.com/SAMT-X/solution-samt-bu-docs -> ${{ github.workspace }}/.hugo-modules/solution-samt-bu-docs` i `HUGO_MODULE_REPLACEMENTS`
-3. Valgfritt: inkludere repo i `inject-lastmod.py` for korrekte «Sist endret»-tidsstempler
+Push til `solution-samt-bu-docs` → kryssrepo-trigger → CI kloner siste commit direkte. Manuell `hugo mod get @latest` er ikke lenger nødvendig.
 
-**Avveining:** Endringen er lav risiko og gir automatisk synkronisering – men krever testing av at CI fortsatt bygger korrekt. Beslutningen er utsatt.
+> **NOTE – verifiser neste gang et nytt modulrepo legges til:**
+> Opplegget er bekreftet å fungere for de tre nåværende modulene, men er ikke testet for et fjerde. Neste gang et nytt modulrepo kobles til nettstedet, verifiser at:
+> - CI-bygget fortsatt er grønt etter at nytt checkout-steg er lagt til
+> - Innhold fra det nye repoet faktisk dukker opp på nettstedet etter push
+> - «Sist endret»-tidsstempler vises korrekt for det nye innholdet
+>
+> Se kommentarblokken i `hugo.yml` og `inject-lastmod.py` for mønsteret (3 steg).
 
 ---
 

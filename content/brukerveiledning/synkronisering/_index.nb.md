@@ -115,6 +115,29 @@ git push
 
 Konfigurasjonsfilen er strukturert med seksjoner. Hvis to bidragsytere har lagt til **ulike** seksjoner, skal begge beholdes. Åpne filen, slett konfliktmarkørene, og sørg for at begge tilleggene er med i den endelige filen.
 
+### UUID-workflow og avviste pushes
+
+Når du pusher nye Markdown-filer, kjører GitHub Actions-workflowen `ensure-uuids.yml` automatisk. Den sjekker om nye filer mangler `id`-felt (UUID), og committer dem inn direkte på `main` – gjerne i løpet av sekunder.
+
+Hvis du pusher to ganger raskt etter hverandre (eller gjør en lokal endring rett etter første push), kan dette skje:
+
+```
+Du:       push 1 (nye filer uten id)
+GitHub:   UUID-workflow committer id-felt → main er nå 1 commit foran deg
+Du:       push 2 → AVVIST ("Updates were rejected because the remote contains work...")
+```
+
+**Løsning:**
+
+```bash
+git pull --rebase
+git push
+```
+
+Rebase legger din commit oppå UUID-workflowens commit, og push går igjennom. Ingen data tapes – UUID-workflowens `id`-felt blir automatisk med i din lokale kopi.
+
+**Forebygging:** Vent 10–15 sekunder mellom push og neste lokale commit, eller kjør `git pull --rebase` som en vane før push nummer to.
+
 ### Decap CMS vs. lokal redigering
 
 CMS-en committer direkte til `main`. Hvis du har gjort lokale endringer på samme fil, er dette det klassiske divergens-scenariet. Løses av `sync-all` via rebase – fungerer automatisk med mindre dere har endret nøyaktig de samme linjene.

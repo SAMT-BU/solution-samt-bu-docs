@@ -208,17 +208,20 @@ Implementert som inline `<script>` etter ankeret i `index.html` i hver portal:
 </script>
 ```
 
-### Edit-switcher – nåværende menyvalg (2026-03-09)
+### Edit-switcher – nåværende menyvalg (2026-03-10)
 
 | Valg | Status | Implementasjon |
 |------|--------|----------------|
 | «Denne siden» | ✅ Virker | Decap deep-link til gjeldende side |
-| «Legg til underkapittel» | ⏳ Under test | GitHub create file-URL med `?filename=nytt-kapittel/_index.nb.md` – popup-melding inntil testet |
+| «Side – samme nivå» | ⏳ Alert-popup (midlertidig) | `$addSiblingURL` beregnet i edit-switcher.html, men knappen viser kun popup. Skjules på rotnivå-sider (`$entrySlug == ""`). |
+| «Underkapittel» | ⏳ Alert-popup (midlertidig) | `$addChildURL` beregnet med `?filename=nytt-kapittel/_index.nb.md`, men knappen viser kun popup. |
 | «Andre valg» | ✅ Virker | Lenke til CMS-portaloverside |
 
-**Planlagt menystruktur (etter testing):** «Denne siden» / «+ Side – samme nivå» / «+ Underkapittel» / «Andre valg» – alle GitHub-direktelenker for de to nye valgene, uavhengig av Decap.
+**Popup-tekst (begge + knapper):** Tittel «Oppdatert implementering i arbeid», tekst «I påvente av oppdatert implementering kan du gjøre dette via GitHub.»
 
-**`?filename=`-tilnærmingen:** URL-en til «Legg til underkapittel» er nå `https://github.com/SAMT-X/<repo>/new/main/content/<dir>/?filename=nytt-kapittel/_index.nb.md`. Stien peker på eksisterende mappe; filnavnfeltet forhåndsutfylles. Ikke bekreftet fungerende i produksjon ennå.
+**Planlagt:** Erstatt popup med ekte GitHub create file-URL for begge knapper. Veikart-oppføringer finnes i `solution-samt-bu-docs/content/veikart/ny-side-samme-nivaa/` og `legg-til-underkapittel/`.
+
+**Merk:** Knappene bruker `onclick="alert(this.getAttribute('data-msg').replace(/\\n/g,'\n')); return false;"` – `replace()`-trikset er nødvendig for at `\n` i `data-msg`-attributtet renderes som faktisk linjeskift i `alert()`.
 
 ### Decap CMS – kjent begrensning: «Ny side» og «Dupliser» feiler
 
@@ -299,6 +302,25 @@ Når du er ferdig: sync-all
 
 ---
 
+## samt-bu-files – filstruktur
+
+Brukes til å lagre binærfiler (Word, PDF, bilder) som lenkes til fra `samt-bu-drafts` eller andre moduler.
+
+### Mappestruktur
+
+```
+library/        ← Ferdige/offisielle dokumenter, organisert per aktør/tema
+  Novari/       ← Vedlegg og rapporter fra Novari
+drafts/         ← Innspill under arbeid, flatt med dato-prefix
+  yyyy-mm-dd Tittel.docx
+```
+
+**Konvensjon for `drafts/`:** Filnavn format `yyyy-mm-dd Tittel.docx` – sikrer kronologisk sortering og sporbarhet. Mellomrom i filnavn enkodes som `%20` i URL-er.
+
+**Planlagt neste steg:** Vurdere én mappe per innspill i `drafts/` (for å romme vedlegg og oppfølgingsdokumenter). Se `veikart/innspill-mappestruktur/`.
+
+---
+
 ## Kildehenvisningsmønster (Word-dokumenter)
 
 Bekreftet fungerende mønster for å lenke til Word-filer i `samt-bu-files`:
@@ -341,3 +363,14 @@ Bekreftet fungerende mønster for å lenke til Word-filer i `samt-bu-files`:
 | `utkast/` | 90 | modul samt-bu-drafts |
 
 **Repo-navnekonvensjon:** `samt-bu-`-prefiks = publisert innhold/produkt. `team-`-prefiks = internt arbeidsrepo.
+
+### Use cases (behov/use-cases/) – status 2026-03-10
+
+22 nummererte use cases (01–22). Nylig lagt til/endret:
+- **20** – Tilgjengeliggjøring av resultater fra grunnskolen (stub, weight 20)
+- **21** – Valg av utdanningsløp (full innhold inkl. «Innspill til løsningsvalg», weight 21)
+- **22** – Analysedata fra barnehage til voksenopplæring (full innhold + KS Digital/Azure Databricks-merknad, weight 22; mappe het tidligere `20-analyse-vestland-fk`)
+
+Seksjonstittel endret: «Case» → «Case-beskrivelser» / «Case descriptions».
+
+Seksjon «Innspill til løsningsvalg» lagt til i case 21 og 22. Øvrige 20 caser mangler denne seksjonen – se `veikart/oppdater-use-case-mal/`.

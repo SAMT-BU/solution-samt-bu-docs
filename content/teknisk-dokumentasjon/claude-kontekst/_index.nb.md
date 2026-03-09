@@ -208,6 +208,30 @@ Implementert som inline `<script>` etter ankeret i `index.html` i hver portal:
 </script>
 ```
 
+### Edit-switcher – nåværende menyvalg (2026-03-09)
+
+| Valg | Status | Implementasjon |
+|------|--------|----------------|
+| «Denne siden» | ✅ Virker | Decap deep-link til gjeldende side |
+| «Legg til underkapittel» | ⏳ Under test | GitHub create file-URL med `?filename=nytt-kapittel/_index.nb.md` – popup-melding inntil testet |
+| «Andre valg» | ✅ Virker | Lenke til CMS-portaloverside |
+
+**Planlagt menystruktur (etter testing):** «Denne siden» / «+ Side – samme nivå» / «+ Underkapittel» / «Andre valg» – alle GitHub-direktelenker for de to nye valgene, uavhengig av Decap.
+
+**`?filename=`-tilnærmingen:** URL-en til «Legg til underkapittel» er nå `https://github.com/SAMT-X/<repo>/new/main/content/<dir>/?filename=nytt-kapittel/_index.nb.md`. Stien peker på eksisterende mappe; filnavnfeltet forhåndsutfylles. Ikke bekreftet fungerende i produksjon ennå.
+
+### Decap CMS – kjent begrensning: «Ny side» og «Dupliser» feiler
+
+**Symptom:** «Failed to persist entry: API_ERROR: Git Repository Error: path contains a malformed path component»
+
+**Rotårsak:** `path: "{{dir}}/_index"` i nested collection. For nye oppføringer uten eksisterende mappekontest settes `{{dir}}` = `.` (punktum) → full sti blir `content/./_index.nb.md` → GitHub API avviser som ugyldig stikomponent.
+
+**Redigering av eksisterende sider virker** – da hentes `{{dir}}` fra den faktiske filstien.
+
+**Løsning fremover:** Implementer «+ Side – samme nivå»-knapp i Endre-menyen som bruker GitHub "create file"-URL direkte (omgår Decap). Se «Neste planlagte oppgaver» i MEMORY.md.
+
+**Workaround nå:** Opprett nye filer manuelt via GitHub (se popup i «Legg til underkapittel»-valget).
+
 ### Rutinglogikk i edit-switcher (fire grener)
 
 Basert på `path.Dir .File.Path` (normalisert, unngår Windows-backslash-problem):

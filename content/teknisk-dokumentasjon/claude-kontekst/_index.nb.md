@@ -213,13 +213,11 @@ Implementert som inline `<script>` etter ankeret i `index.html` i hver portal:
 | Valg | Status | Implementasjon |
 |------|--------|----------------|
 | «Denne siden» | ✅ Virker | Decap deep-link til gjeldende side |
-| «Side – samme nivå» | ⏳ Alert-popup (midlertidig) | `$addSiblingURL` beregnet i edit-switcher.html, men knappen viser kun popup. Skjules på rotnivå-sider (`$entrySlug == ""`). |
+| «Side – samme nivå» | ✅ Virker | Åpner «Ny side»-dialog (se under) |
 | «Underkapittel» | ⏳ Alert-popup (midlertidig) | `$addChildURL` beregnet med `?filename=nytt-kapittel/_index.nb.md`, men knappen viser kun popup. |
 | «Andre valg» | ✅ Virker | Lenke til CMS-portaloverside |
 
-**Popup-tekst (begge + knapper):** Tittel «Oppdatert implementering i arbeid», tekst «I påvente av oppdatert implementering kan du gjøre dette via GitHub.»
-
-**Planlagt:** Erstatt popup med ekte GitHub create file-URL for begge knapper. Veikart-oppføringer finnes i `solution-samt-bu-docs/content/veikart/ny-side-samme-nivaa/` og `legg-til-underkapittel/`.
+**Planlagt:** Erstatt popup for «Underkapittel» med ekte dialog. Veikart-oppføring finnes i `solution-samt-bu-docs/content/veikart/legg-til-underkapittel/`.
 
 **Merk:** Knappene bruker `onclick="alert(this.getAttribute('data-msg').replace(/\\n/g,'\n')); return false;"` – `replace()`-trikset er nødvendig for at `\n` i `data-msg`-attributtet renderes som faktisk linjeskift i `alert()`.
 
@@ -407,15 +405,36 @@ Seksjon «Innspill til løsningsvalg» lagt til i case 21 og 22. Øvrige 20 case
 ### ensure-uuids løkke-fiks
 `ensure-uuids.yml` fikk `if: github.actor != 'github-actions[bot]'` på jobbnivå. Tidligere kjørte workflowen på seg selv: bruker pusher → auto-UUID-commit → trigger ny ensure-uuids → ny UUID-commit forsøker push → avvist pga. race. Nå stopper løkken ved kilden.
 
-### «Ny side – samme nivå»-dialog: tre forbedringer
-Alle endringer i `hugo-theme-samt-bu/layouts/partials/` (`edit-switcher.html` + `custom-footer.html`):
+### «Ny side – samme nivå»-dialog: fullstendig implementert
 
-1. **Blank status-valg:** `<option value="">–</option>` øverst i status-dropdown. Hvis blank velges utelates `status:`-feltet helt fra frontmatter (begge nb og en).
-2. **Defaultvekt = gjeldende side + 1:** Hugo sender `.Weight` til `openNewSiblingDialog(repo, parentPath, lang, currentWeight)`. Vekt-feltet forhåndsutfylles ved åpning.
-3. **Auto-shift av nabosider:** Etter at de to nye filene er opprettet via GitHub API, kjøres `shiftSiblings(token, repo, parentPath, minWeight, excludeSlug)` som:
-   - Henter directory listing av `parentPath` fra GitHub Contents API
-   - Leser `_index.nb.md` + `_index.en.md` for alle undermapper parallelt (`Promise.all`)
-   - Øker `weight` med 1 for alle filer med `weight >= minWeight` (unntatt den nye siden)
-   - Bruker `atob`/`btoa` + regex for å parse og oppdatere YAML frontmatter in-memory
-   - Committer én fil av gangen med melding «Auto: juster vekt etter ny side»
-   - Ignorer feil for enkeltfiler (`.catch(() => {})`) – siden dette er et best-effort-steg
+Alle endringer i `hugo-theme-samt-bu/layouts/partials/` (`edit-switcher.html` + `custom-footer.html`).
+
+**Dialogfunksjonalitet:**
+- Åpnes fra «Side – samme nivå» i Endre-menyen
+- Draggbar via tittelbaren (grab/grabbing cursor)
+- Resizable via CSS `resize: both` (håndtak nede til høyre)
+- Lukkes med ✕-knapp eller «Avbryt» – **ikke** ved klikk utenfor
+- Tilbakestiller posisjon til midten ved ny åpning
+- Fontstørrelse 16px eksplisitt på alle inputfelter (nettlesere arver ikke font-size inn i form-elementer)
+
+**Feltene:**
+- Tittel (norsk) – påkrevd
+- Korttittel / linkTitle – valgfri, brukes som slug-kilde
+- Vekt – forhåndsutfylt med gjeldende sides vekt + 1
+- Status – dropdown med gyldige verdier + blank (utelater `status:` fra frontmatter)
+- Innhold (markdown) – valgfri brødtekst
+
+**GitHub API – atomisk commit (Git Data API):**
+Alle filendringer (nye filer + vektjusteringer for søsken) skjer i **én enkelt commit** via Git Data API (trees-APIet). Flyt:
+1. `GET /git/ref/heads/main` → hent current commit SHA
+2. `GET /git/commits/{sha}` → hent current tree SHA
+3. Parallel fetch: sibling-filer som trenger vektjustering (`fetchSiblingWeightUpdates`)
+4. `POST /git/trees` med alle filer (NB + EN + oppdaterte søsken) → ny tree SHA
+5. `POST /git/commits` → ny commit SHA
+6. `PATCH /git/refs/heads/main` → oppdater ref
+
+Dette gir **nøyaktig 1 push per ny side** uansett antall søsken, og eliminerer race condition mot `ensure-uuids.yml`.
+
+**Commit-meldingsformat:** `Ny side: <tittel>`
+
+**UUID:** Legges til av `ensure-uuids.yml` etter push (kjører én gang, alltid grønn).

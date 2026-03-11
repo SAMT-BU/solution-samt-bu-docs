@@ -583,3 +583,51 @@ done
 
 **Forventet totalvente-tid:** ~50s bygg + 15s grace = ~65 sekunder.
 **Fallback:** Hvis grace-perioden utløper før bygg B starter (ensure-uuids meget sen), navigeres til side uten UUID. En manuell reload etter ~1 min viser UUID (bygg B ferdig). Med retry-fiksen vil ensure-uuids alltid committe UUID, så reload fungerer som forventet.
+
+---
+
+## Endringslogg – 2026-03-11 (sen natt)
+
+### «Underkapittel»-dialog – implementert
+
+Erstatter alert-popup med ekte dialog (gjenbruker `#np-overlay`).
+
+**Ny global funksjon:** `openNewChildDialog(repo, dirPath, lang, currentPermalink)` i `custom-footer.html` IIFE.
+
+**Ny variabel `npMode = 'sibling' | 'child'`** styrer:
+- URL-beregning i submit-callback:
+  - `child`: `currentPermalink.replace(/\/?$/, '/') + slug + '/'`
+  - `sibling`: `currentPermalink.replace(/\/[^\/]+\/?$/, '/') + slug + '/'`
+- Dialogtittel og knapp-tekst i `showNpBuildPanel()`
+
+**`openNewSiblingDialog`** fikk `npMode = 'sibling'` + eksplisitt reset av dialogtittel.
+
+**`edit-switcher.html`:** Underkapittel-valget vises ved `ne $dirPath "content"` (ikke på rot). `onclick` kaller `openNewChildDialog(...)`.
+
+### UUID vises ikke etter ny side – rotårsak #3 funnet og fikset
+
+**Rotårsak (ny):** `ensure-uuids.yml` pusher med `GITHUB_TOKEN`. GitHub blokkerer per design at `GITHUB_TOKEN`-pusher trigger andre workflows. UUID-commiten trigget derfor aldri `hugo.yml` → bygg B eksisterte ikke → reload hjalp ikke (UUID ble aldri deployet).
+
+**Fix i `ensure-uuids.yml`:**
+1. `actions: write`-permission lagt til
+2. Commit-steget fikk `id: uuid-commit` + `echo "changed=true/false" >> $GITHUB_OUTPUT`
+3. Nytt steg: kaller `workflow_dispatch` på `hugo.yml` hvis `changed == 'true'`
+
+```yaml
+- name: Trigger Hugo-bygg for UUID-commit
+  if: steps.uuid-commit.outputs.changed == 'true'
+  run: |
+    curl -s -X POST \
+      -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+      -H "Accept: application/vnd.github+json" \
+      https://api.github.com/repos/SAMT-X/samt-bu-docs/actions/workflows/hugo.yml/dispatches \
+      -d '{"ref":"main"}'
+```
+
+`workflow_dispatch` via GITHUB_TOKEN fungerer (direkte API-kall, ikke push) og trigget `hugo.yml` korrekt.
+
+**OBS:** 15s grace-periode i `npPollBuild` er nå mer avgjørende enn noensinne – `workflow_dispatch`-bygget starter noe etter UUID-commiten.
+
+### Ny veikart-oppføring: Slett side med undermapper
+
+`solution-samt-bu-docs/content/veikart/slett-side-med-undermapper/` – dokumenterer at «Slett denne siden» kun sletter `_index.nb.md` + `_index.en.md`, ikke undermapper. To alternativer: A) blokker sletting hvis siden har barn (anbefalt, enkelt), B) rekursiv sletting via Trees API.

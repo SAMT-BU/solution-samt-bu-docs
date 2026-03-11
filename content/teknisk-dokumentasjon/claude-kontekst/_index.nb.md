@@ -631,3 +631,61 @@ Erstatter alert-popup med ekte dialog (gjenbruker `#np-overlay`).
 ### Ny veikart-oppføring: Slett side med undermapper
 
 `solution-samt-bu-docs/content/veikart/slett-side-med-undermapper/` – dokumenterer at «Slett denne siden» kun sletter `_index.nb.md` + `_index.en.md`, ikke undermapper. To alternativer: A) blokker sletting hvis siden har barn (anbefalt, enkelt), B) rekursiv sletting via Trees API.
+
+---
+
+## Endringslogg – 2026-03-11 (ettermiddag)
+
+### «Rediger innhold» (qe-dialog) – WYSIWYG med frontmatter-redigering
+
+#### Hva er implementert
+
+**Frontmatter-feltredigering** (`#qe-meta-panel` i `edit-switcher.html`):
+- Fire felt vises mellom headerbar og editor: Tittel (`title`), Meny (`linkTitle`), Vekt (`weight`), Status (dropdown)
+- Populeres automatisk fra filens YAML-frontmatter ved åpning
+- Lagres tilbake til frontmatter ved «Lagre»-klikk (atomisk commit via Git Data API)
+- `linkTitle`/`weight`/`status` utelates fra frontmatter om feltet er tomt (fjernes med `removeFmField`)
+
+**YAML-helpere** i qe-dialog IIFE (`custom-footer.html`):
+- `parseFmField(fm, key)` – henter én YAML-linje fra frontmatter-streng
+- `setFmField(fm, key, line)` – erstatter/legger til YAML-linje
+- `removeFmField(fm, key)` – fjerner YAML-linje
+- `qeYamlStr(s)` – siterer verdi hvis nødvendig (inneholder `:` eller `"`)
+
+**Quill WYSIWYG-editor** (Quill v1.3.7 fra jsDelivr CDN):
+- `#qe-editor-area` som flex-kolonne-wrapper → toolbar som sibling + container med `flex:1`
+- Turndown (markdown→HTML) + Turndown GFM-plugin for tabellkonvertering ved lagring
+- `marked.parse()` for HTML→Quill på åpning
+- Paste-handler for bilder (base64 → legges til `qeImages`/`qeImageMap`, committes som separate filer)
+
+**Tabellknapp (⊞):**
+- Setter inn GFM-tabellmal som ren tekst via `qeEditor.insertText(idx, tbl, 'user')`
+- Hugo + Turndown håndterer GFM-tabeller i Markdown – ingen Quill-plugin nødvendig
+
+#### Hva feilet – quill-better-table
+
+Forsøkte å integrere `quill-better-table@1.2.10` for visuell tabellredigering. Tre runder med feilsøking:
+
+| Problem | Rotårsak |
+|---------|---------|
+| `TypeError: e is not a constructor` | CDN-global heter `window.quillBetterTable` (lowercase), ikke `QuillBetterTable` |
+| `quill: Cannot import modules/better-table` | Feil global-referanse, registrering feilet stille |
+| `TypeError: Failed to execute 'insertBefore' on 'Node'` | QBT-modulens konstruktør gjør DOM-manipulasjon som feiler i `position:fixed`-containere |
+
+**Konklusjon:** quill-better-table er fundamentalt inkompatibel med fixed-position overlays. Fjernet helt.
+
+#### Kjent begrensning – Quill generelt
+
+Quill v1 rendrer tabeller som rå Markdown-tekst (` | col | col | `), ikke som visuell tabell. Brukere ser og redigerer tabellsyntaks direkte, ikke en visuell tabellcelle-editor. Dette er akseptabelt som mellomløsning, men ikke ideelt.
+
+**Neste steg:** Vurdere **TipTap** som erstatning for Quill. Se veikart-oppføring `veikart/tiptap-som-editor/`.
+
+#### Viktig note for eventuell tilbakevending til Quill
+
+Paste av bilder er implementert i qe-dialog (paste-handler på `qeEditor.root`), men **er ikke testet i produksjon** i denne sesjonen. Mønsteret ble først validert for np-dialog («Ny side»). Verifiser at bildelasting, base64-lagring og commit fungerer likt for qe-dialog.
+
+#### Layout-fix: dobbelt toolbar
+
+**Problem:** `#qe-body-quill` hadde `display:flex; flex-direction:column` inline. Quill v1 inserter toolbar som DOM-sibling *før* container-elementet, i *foreldreelementet*. Dette ga to toolbars (en i `#qe-editor-area`, en i foreldren).
+
+**Fix:** Fjerne flex-stilene fra `#qe-body-quill` direkte. Gi i stedet `#qe-editor-area` flex-column-rollen. `#qe-body-quill` er da et vanlig blokk-element – Quill inserter toolbar som forventet sibling i `#qe-editor-area`.

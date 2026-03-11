@@ -77,7 +77,7 @@ Når brukeren ber om oppdatering av memory/kontekst, eller signaliserer at sesjo
 | `themes/hugo-theme-samt-bu/layouts/partials/header.html` | HTML-skjelett, jQuery-lasting, restore-tabs |
 | `themes/hugo-theme-samt-bu/layouts/partials/topbar.html` | Header-innhold, inline flex-CSS |
 | `themes/hugo-theme-samt-bu/layouts/partials/search.html` | Søkefelt + script-lasting (lunr, horsey, search.js) |
-| `themes/hugo-theme-samt-bu/layouts/partials/edit-switcher.html` | Endre/Edit-dropdown med Decap-deeplink |
+| `themes/hugo-theme-samt-bu/layouts/partials/edit-switcher.html` | Endre/Edit-dropdown (WYSIWYG, Ny side, Slett) – ingen Decap-avhengighet |
 | `themes/hugo-theme-samt-bu/layouts/partials/footer.html` | Scroll-spy, scroll-fade, sidebar-JS |
 | `themes/hugo-theme-samt-bu/static/js/altinndocs-learn.js` | Sidebar-akkordeon, clipboard, keyboard-nav |
 | `themes/hugo-theme-samt-bu/layouts/index.json` | JSON-output-template for søkeindeks |
@@ -171,88 +171,55 @@ hugo mod get github.com/SAMT-X/<navn>@latest
 
 ---
 
-## Decap CMS
+## GitHub OAuth-flyt (innebygd, uten Decap)
 
-- **Norsk portal:** `/edit/`  |  **Engelsk portal:** `/edit/en/`
-- **OAuth-proxy:** Cloudflare Worker `https://samt-bu-cms-auth.erik-hag1.workers.dev`
-- **Lokal testing:** `hugo server` + `local_backend: true` i config.yml
+Decap CMS og alle tilknyttede portaler er fjernet (2026-03-11). Innlogging skjer nå direkte via nettstedets egen OAuth-popup.
 
-### Aktive portaler
+### Token-håndtering (`custom-footer.html`, global `<script>`)
 
-| Mappe | Repo | Språk | Dekker |
-|-------|------|-------|--------|
-| `static/edit/docs-nb/` | `samt-bu-docs` | nb | Lokalt innhold i samt-bu-docs |
-| `static/edit/docs-en/` | `samt-bu-docs` | en | Lokalt innhold i samt-bu-docs |
-| `static/edit/arkitektur-nb/` | `team-architecture` | nb | `content/teams/team-architecture/` |
-| `static/edit/arkitektur-en/` | `team-architecture` | en | `content/teams/team-architecture/` |
-| `static/edit/utkast-nb/` | `samt-bu-drafts` | nb | `content/utkast/` |
-| `static/edit/utkast-en/` | `samt-bu-drafts` | en | `content/utkast/` |
-| `static/edit/loesninger-nb/` | `solution-samt-bu-docs` | nb | `content/loesninger/cms-loesninger/samt-bu-docs/` |
-| `static/edit/loesninger-en/` | `solution-samt-bu-docs` | en | `content/loesninger/cms-loesninger/samt-bu-docs/` |
+| Funksjon | Rolle |
+|----------|-------|
+| `getStoredToken()` | Leser token fra `samt-bu-gh-token` (localStorage). Fallback til Decap-nøkler for migrering. |
+| `storeToken(token)` | Lagrer token i `samt-bu-gh-token`. |
+| `doGitHubLogin(onSuccess)` | Åpner OAuth-popup mot Cloudflare Worker, implementerer Netlify/Decap `postMessage`-protokollen på åpner-siden, kaller `onSuccess(token)` etter vellykket innlogging. |
 
-> **Kritisk mønster:** Hvert Hugo-modulrepo som monterer innhold **må ha sin egen CMS-portal** som peker på det repoet. Hvis modulinnhold feilaktig rutes til `docs`-portalen (som peker på `samt-bu-docs`), finnes ikke filen der → CMS viser tomme felter uten feilmelding. Symptomet er: alle skjemafelter er tomme, men «CHANGES SAVED» vises.
+**Protokollen (Cloudflare Worker callback):**
+1. Popup sender `"authorizing:github"` til opener (wildcard)
+2. Opener svarer `"authorizing:github"` til `e.source` – popup lærer openers origin
+3. Popup sender `"authorization:github:success:{token, provider}"` tilbake
+4. Opener parser JSON, kaller `storeToken()`, lukker popup, kaller `onSuccess`
 
-### Tilbake-lenke i portaler (document.referrer)
+**Popup-blokkering:** Dersom popup er blokkert av nettleseren, vises en `alert()` om å tillate popup-vinduer.
 
-Alle 6 portaler har en fast `«← Tilbake til nettstedet»`-lenke (bottom-right). Den bruker `document.referrer` for å returnere brukeren til den **spesifikke siden** de kom fra (ikke rotsiden). Fallback til `/samt-bu-docs/` (NB) / `/samt-bu-docs/en/` (EN) hvis referrer ikke er fra nettstedet eller er tom.
+**Logg ut:** Slett `samt-bu-gh-token` fra localStorage manuelt (DevTools → Application → Local Storage).
 
-Implementert som inline `<script>` etter ankeret i `index.html` i hver portal:
-```html
-<script>
-  (function() {
-    var ref = document.referrer;
-    if (ref && ref.indexOf('samt-bu-docs') !== -1 && ref.indexOf('/edit/') === -1) {
-      document.getElementById('back-to-portal').href = ref;
-    }
-  })();
-</script>
-```
+### Edit-switcher – nåværende menyvalg
 
-### Edit-switcher – nåværende menyvalg (2026-03-11)
+| Valg | Implementasjon |
+|------|----------------|
+| «Rediger dette kapitlet» | WYSIWYG TipTap-editor (qe-dialog), henter og lagrer fil via GitHub API |
+| «Nytt kapittel etter dette» | «Ny side»-dialog (np-dialog, mode=sibling) |
+| «Nytt underkapittel» | «Ny side»-dialog (np-dialog, mode=child), ikon `fa-folder-o` |
+| «Slett denne siden» | Bekreftelsesdialog → atomisk slett nb+en → polling → auto-navigering |
 
-| Valg | Status | Implementasjon |
-|------|--------|----------------|
-| «Denne siden» | ✅ Virker | Decap deep-link til gjeldende side |
-| «Side – samme nivå» | ✅ Virker | Åpner «Ny side»-dialog (se under) |
-| «Underkapittel» | ⏳ Alert-popup (midlertidig) | `$addChildURL` beregnet med `?filename=nytt-kapittel/_index.nb.md`, men knappen viser kun popup. |
-| «Slett denne siden» | ✅ Virker | Bekreftelsesdialog → atomisk slett nb+en i én commit → polling → auto-navigering |
-| «Andre valg» | ✅ Virker | Lenke til CMS-portaloverside |
+**Synlighet:** Alle fire vises kun når `.File` finnes og `$entrySlug != ""`. «Slett» og «Nytt underkapittel» skjules i tillegg på rot-nivå (`$dirPath == "content"`).
 
-**Planlagt:** Erstatt popup for «Underkapittel» med ekte dialog. Veikart-oppføring finnes i `solution-samt-bu-docs/content/veikart/legg-til-underkapittel/`.
+### Repo-ruting i edit-switcher (tre grener + default)
 
-**Merk:** Knappene bruker `onclick="alert(this.getAttribute('data-msg').replace(/\\n/g,'\n')); return false;"` – `replace()`-trikset er nødvendig for at `\n` i `data-msg`-attributtet renderes som faktisk linjeskift i `alert()`.
+Basert på `path.Dir .File.Path` (normalisert):
 
-### Decap CMS – kjent begrensning: «Ny side» og «Dupliser» feiler
+- `hasPrefix "teams/"` → `githubRepo = "team-architecture"`
+- `eq/hasPrefix "utkast"` → `githubRepo = "samt-bu-drafts"`
+- `eq/hasPrefix "loesninger/cms-loesninger/samt-bu-docs"` → `githubRepo = "solution-samt-bu-docs"`
+- Alt annet → `githubRepo = "samt-bu-docs"` (default)
 
-**Symptom:** «Failed to persist entry: API_ERROR: Git Repository Error: path contains a malformed path component»
-
-**Rotårsak:** `path: "{{dir}}/_index"` i nested collection. For nye oppføringer uten eksisterende mappekontest settes `{{dir}}` = `.` (punktum) → full sti blir `content/./_index.nb.md` → GitHub API avviser som ugyldig stikomponent.
-
-**Redigering av eksisterende sider virker** – da hentes `{{dir}}` fra den faktiske filstien.
-
-**Løsning fremover:** Implementer «+ Side – samme nivå»-knapp i Endre-menyen som bruker GitHub "create file"-URL direkte (omgår Decap). Se «Neste planlagte oppgaver» i MEMORY.md.
-
-**Workaround nå:** Opprett nye filer manuelt via GitHub (se popup i «Legg til underkapittel»-valget).
-
-### Rutinglogikk i edit-switcher (fire grener)
-
-Basert på `path.Dir .File.Path` (normalisert, unngår Windows-backslash-problem):
-
-- `hasPrefix "teams/"` → arkitektur-portal
-- `eq/hasPrefix "utkast"` → utkast-portal
-- `eq/hasPrefix "loesninger/cms-loesninger/samt-bu-docs"` → loesninger-portal
-- Alt annet → docs-portal
-
-**Entry-slug:** Full relativ sti inkl. `/_index`, relativt til modulens eget `content/`-rot. F.eks. gir `loesninger/cms-loesninger/samt-bu-docs/brukerveiledning` → slug `brukerveiledning/_index`.
-
-**Når en ny modul legges til:** Legg til nytt grein i `edit-switcher.html` *før* `{{ else }}`-blokken. Se eksisterende grener for mønster.
+**Når en ny modul legges til:** Legg til nytt grein i `edit-switcher.html` *før* `{{ else }}`-blokken.
 
 ### UUID (id-felt i frontmatter)
 
 - UUID v4, samme verdi i nb og en for samme side – **aldri endres manuelt**
-- Håndteres av `.github/workflows/ensure-uuids.yml` (finnes i alle tre repoer)
-- `widget: hidden` + `i18n: duplicate` i alle Decap-portaler → usynlig for redaktøren
-- Decap CMS 3.x CDN eksponerer ikke `window.React` → custom widget krever byggesteg, ikke verdt det
+- Håndteres av `.github/workflows/ensure-uuids.yml` (finnes i alle fire repoer)
+- `$entrySlug` brukes ikke lenger til Decap-routing – kun som betingelse for å vise edit-knapper
 
 ---
 
@@ -513,8 +480,8 @@ Vises (`display:flex`) i det svarte footerfeltet (nede til venstre) så lenge po
 **Fontarv – mønster:**
 Nettlesere arver IKKE `font-size` inn i `<button>`-elementer. Eksplisitt `font-size:16px; font-family:inherit` nødvendig på alle knapper i dialogen.
 
-**`getDecapToken` – global scope:**
-Funksjonen ble løftet ut av np-dialog IIFE til global `<script>`-blokk øverst i `custom-footer.html`, slik at både «Ny side»-dialogen og «Slett»-dialogen kan dele den.
+**Token-funksjoner – global scope:**
+`getStoredToken()`, `storeToken()` og `doGitHubLogin()` ligger i global `<script>`-blokk øverst i `custom-footer.html`, delt av alle redigeringsfunksjoner. (Erstattet `getDecapToken()` i 2026-03-11-sesjonen.)
 
 ### Hugo-template-variabel scope (lært mønster)
 
@@ -700,7 +667,7 @@ Quill v1 (+ Turndown + marked) er fjernet. TipTap v2 er ny editor i både `qe-di
 
 #### Arkitektur
 
-**Lasting:** Dynamic `import()` fra `esm.sh` – ingen bundler nødvendig. Delt `loadTiptap()` funksjon i global `<script>`-blokk (etter `getDecapToken`). Pakker som lastes:
+**Lasting:** Dynamic `import()` fra `esm.sh` – ingen bundler nødvendig. Delt `loadTiptap()` funksjon i global `<script>`-blokk (etter token-funksjonene). Pakker som lastes:
 - `@tiptap/core@2` – Editor-klassen
 - `@tiptap/starter-kit@2` – bold, italic, headings, lists, code, blockquote
 - `@tiptap/extension-table@2` + TableRow, TableCell, TableHeader – visuell ProseMirror-tabell
@@ -797,5 +764,43 @@ Flere iterasjoner. Endelig tilstand:
 - Tittel-felt: 280px (fra 200px); Meny-felt: 150px
 - Inline `style`-attributter på hvert felt ryddet – CSS-regelen tar over
 
-**Fortsatt gjenstår:** Noen småfiks i layout (ikke spesifisert ennå – ny sesjon).
+**Fortsatt gjenstår:** Avklart og fikset i påfølgende sesjon (se endringslogg 2026-03-11 sen kveld / ny sesjon nedenfor).
+
+---
+
+## Endringslogg – 2026-03-11 (ny sesjon, kveld)
+
+### qe-dialog meta-panel: input/select høyde og vertikal linjering
+
+Flere runder med feilsøking. Endelig løsning:
+
+- Fjernet eksplisitt `height`-attributt på alle felter – Chrome ignorerer `height` på `<select>` inkonsistent
+- Bruker `padding:.25rem .4rem` (inputs) og `padding:.25rem .3rem` (select) – lar begge elementtyper size naturlig fra innhold + padding → konsistent høyde på tvers av nettlesere
+- CSS-regelen `#qe-meta-panel input, select { height: 2rem; }` i `edit-switcher.html` `<style>`-blokk beholdes og tar over fra inline `style`-attributter
+
+### Decap CMS fjernet fullstendig
+
+**Steg 1 – Uavhengig OAuth-flyt (`custom-footer.html`):**
+- `getDecapToken()` erstattet med `getStoredToken()` + `storeToken()` + `doGitHubLogin(onSuccess)`
+- Token lagres i `samt-bu-gh-token` (eget localStorage-nøkkel)
+- Fallback til Decap-nøkler (`netlify-cms-user`, `decap-cms-user`) for migrering av eksisterende sesjoner
+- Alle fire dialog-åpnere (Ny side, Rediger, Slett) kaller nå `doGitHubLogin(callback)` i stedet for `alert("Du må logge inn via Decap CMS...")` når token mangler
+- Workeren (`samt-bu-cms-auth.erik-hag1.workers.dev`) er uendret – støttet protokollen fra før
+
+**Steg 2 – Rydding av Decap-portaler og edit-switcher:**
+- 18 filer slettet fra `static/edit/` (alle CMS-portaler: docs/arkitektur/utkast/loesninger × nb/en + to oversiktssider)
+- Edit-switcher: «Denne siden (Decap)» og «Andre valg»-menypunkter fjernet
+- Variabler fjernet: `$collection`, `$portalPath`, `$overviewPath`, `$portalURL`, `$overviewURL`, `$pageEditURL`, `$addChildURL`
+
+### Menytekster i Endre-dropdown
+
+| Gammelt | Nytt |
+|---------|------|
+| «Rediger innhold» | «Rediger dette kapitlet» |
+| «Side – samme nivå» | «Nytt kapittel etter dette» |
+| «Underkapittel» | «Nytt underkapittel» |
+
+**OBS:** i18n-filer (`i18n/nb.toml` og `en.toml` i `samt-bu-docs`) overstyrer template-default. Endringer i template-default alene har ingen effekt hvis i18n-nøkkelen finnes. Oppdatering måtte gjøres i begge steder.
+
+Ikon for «Nytt underkapittel» endret fra `fa-plus` til `fa-folder-o`.
 

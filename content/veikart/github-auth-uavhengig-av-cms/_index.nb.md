@@ -3,40 +3,30 @@ id: e40c2b29-8643-4556-9860-dc72cde6a1d4
 title: "GitHub-autentisering uavhengig av CMS-valg"
 linkTitle: "GitHub-auth – CMS-uavhengig"
 weight: 50
-status: "Ny"
+status: "Godkjent"
 # Gyldige verdier: Ny | Tidlig utkast | Pågår | Til QA | Godkjent | Avbrutt
 ---
 
-## Problem
+**Implementert 2026-03-11.** Alternativ B (gjenbruk OAuth-proxy) ble valgt og gjennomført, kombinert med fullstendig fjerning av Decap CMS.
 
-Funksjonene for inline-redigering direkte fra nettstedet («Ny side», «Slett siden», fremtidig «Rediger») er avhengige av et GitHub OAuth-token for å kalle GitHub API. Per i dag hentes dette tokenet fra Decap CMS sin localStorage-lagring:
+## Hva som ble gjort
 
-```javascript
-function getDecapToken() {
-  var keys = ['netlify-cms-user', 'decap-cms-user'];
-  // ...leser Decap-spesifikke nøkler
-}
+- `getDecapToken()` erstattet med `getStoredToken()` + `storeToken()` + `doGitHubLogin(onSuccess)`
+- Token lagres i `samt-bu-gh-token` (localStorage) – eget nøkkel, uavhengig av Decap
+- Fallback til Decap-nøkler (`netlify-cms-user`, `decap-cms-user`) for brukere med eksisterende sesjon
+- Alle dialog-åpnere trigger OAuth-popup automatisk når token mangler – ingen manuell innloggingssekvens
+- Cloudflare Worker (`samt-bu-cms-auth.erik-hag1.workers.dev`) er uendret – implementerer `postMessage`-protokollen som nettstedet nå selv håndterer på åpner-siden
+- Alle Decap CMS-portaler (`static/edit/`) og Decap-menypunkter i edit-switcher er fjernet
+
+## Teknisk detalj: postMessage-protokollen
+
 ```
-
-**Konsekvens:** Dersom Decap CMS byttes ut med en annen WYSIWYG-løsning (f.eks. TinaCMS, Keystatic, eller noe egenutviklet), vil disse funksjonene slutte å virke – selv om GitHub-integrasjonen i seg selv er helt uavhengig av CMS-valget.
-
-## Ønsket løsning
-
-Implementer en **selvstendig GitHub OAuth-flyt** for nettstedet, uavhengig av hvilket CMS som er i bruk. Token lagres under en nøytral nøkkel (f.eks. `samt-bu-github-token`) i localStorage.
-
-### Alternativer
-
-| Alternativ | Beskrivelse | Kompleksitet |
-|------------|-------------|--------------|
-| **A – Eget token-input** | Enkel dialog der brukeren limer inn et GitHub Personal Access Token | Lav |
-| **B – Gjenbruk OAuth-proxy** | Bruk eksisterende Cloudflare Worker (`samt-bu-cms-auth`) til en selvstendig OAuth-flyt, lagre token under nøytral nøkkel | Middels |
-| **C – Parallell token-lesing** | `getDecapToken()` utvides til å også sjekke en nøytral nøkkel – CMS-spesifikke nøkler som fallback | Lav (overgangsløsning) |
-
-Alternativ C er en rask overgangsløsning som reduserer risikoen uten å kreve ny infrastruktur. Alternativ B er den rette langsiktige løsningen.
-
-## Gjenstående arbeid
-
-- Vurdere og velge alternativ
-- Implementere valgt løsning
-- Oppdatere `getDecapToken()` (ev. gi funksjonen et mer nøytralt navn)
-- Teste at inline-redigering fungerer uten aktiv Decap-innlogging
+Åpner (nettstedet)         Popup (Cloudflare Worker callback)
+       |                              |
+       |←── "authorizing:github" ────|  (popup forteller åpner den er klar)
+       |──── "authorizing:github" ──→|  (åpner svarer – popup lærer vår origin)
+       |←── "authorization:github:  |
+       |     success:{token,...}" ───|  (popup sender token til vår origin)
+       |                              |
+  storeToken() + onSuccess()    popup.close()
+```

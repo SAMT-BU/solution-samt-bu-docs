@@ -743,3 +743,59 @@ Paste-handler på `editor.view.dom` (ProseMirror-roten). Lagrer base64 i `qeImag
 
 `tiptap-markdown` er importert som `mods[8].Markdown || (mods[8].default && mods[8].default.Markdown) || mods[8].default` – defensiv fallback i tilfelle esm.sh wrapper gir default-eksport i stedet for named export. Verifiser i DevTools at `window._Tiptap.Markdown` er en funksjon (TipTap extension) etter første lasting.
 
+---
+
+## Endringslogg – 2026-03-11 (sen kveld)
+
+### Div. bugfikser og layout-forbedringer etter TipTap-migrering
+
+#### 404-feil for Altinn CSS fjernet
+
+`custom-head.html` linje 2–3 refererte `altinndigitalisering.css` og `altinn.css` – begge manglende filer (arv fra Docdock-malen, aldri lagt til). Ga 404-støy i konsollen. Linjene er fjernet.
+
+`DINWeb*.woff`-fontene referert fra `designsystem.css` (via `../fonts/`) finnes heller ikke, men disse er i en fil vi ikke eier. Harmløse da `custom-head.html` uansett overstyrer til Helvetica/Arial.
+
+#### Nummerert liste i TipTap-editor viste ikke tall
+
+Global CSS (theme/designsystem) nullstilte `list-style` på alle lister. Fiks: eksplisitte CSS-regler i `edit-switcher.html`:
+```css
+#qe-body-pm .ProseMirror ul, #np-body-pm .ProseMirror ul { list-style-type: disc; }
+#qe-body-pm .ProseMirror ol, #np-body-pm .ProseMirror ol { list-style-type: decimal; }
+```
+
+#### `hide_toc`-frontmatter – skjul innholdsfortegnelse
+
+Ny parameter `hide_toc: true` i frontmatter skjuler `<aside id="page-toc">` og lar `#body` (flex:1) ta full bredde automatisk.
+
+- **`footer.html`:** `{{ if not .Params.hide_toc }}<aside ...>...</aside>{{ end }}`
+- **`edit-switcher.html`:** Checkbox «Skjul innholdsfortegnelse» / «Hide TOC» i qe-meta-panel
+- **`custom-footer.html`:** `parseFmField(qeFrontmatter, 'hide_toc') === 'true'` ved åpning; `setFmField`/`removeFmField` ved lagring
+
+#### qe-dialog header og meta-panel – layout-fiks
+
+Flere iterasjoner. Endelig tilstand:
+
+**Blå header-bar:**
+- Tre-kolonnestruktur: `<div flex:1>` (spacer) | `#qe-title` (sentrert) | `<div flex:1 justify:flex-end>` (knapper)
+- Tittel: `font-size:1.35rem; font-weight:700`
+- Tittel-tekst: `Rediger side: <tittel>` / `Edit page: <title>` – uten hermeteikn
+- `jsonify`-wrapping ga synlige `"..."` rundt tittelen – stripes i JS med `.replace(/^"(.*)"$/, '$1')`
+
+**Grått meta-panel:**
+- Innhold wrappes i `max-width:960px; margin:0 auto` – flush med editor-kolumnen
+- CSS-regel normaliserer alle form-kontroller til uniform høyde:
+  ```css
+  #qe-meta-panel input[type="text"],
+  #qe-meta-panel input[type="number"],
+  #qe-meta-panel select {
+    height: 2rem; box-sizing: border-box; padding: .3rem .5rem;
+    border: 1px solid #bbb; border-radius: 3px; font-size: 14px;
+    font-family: inherit; line-height: 1.2; vertical-align: middle;
+  }
+  ```
+- `<select>` ignorerer padding-basert høyde på tvers av nettlesere – `height: 2rem` i CSS-regel er eneste pålitelige fix
+- Tittel-felt: 280px (fra 200px); Meny-felt: 150px
+- Inline `style`-attributter på hvert felt ryddet – CSS-regelen tar over
+
+**Fortsatt gjenstår:** Noen småfiks i layout (ikke spesifisert ennå – ny sesjon).
+

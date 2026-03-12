@@ -896,6 +896,20 @@ Tre separate polling-mekanismer implementert i `custom-footer.html`:
 - **np-dialog Opprett-knapp:** Disabled umiddelbart ved klikk (før token-sjekk og validering). Re-enables med riktig tekst (norsk/engelsk, sibling/child) ved feil
 - **Automatisk retry:** `tryCommit()` wrapper kaller `createQeCommit` opptil 2 ganger ved «Update is not a fast forward». Viser «Prøver på nytt…» mellom forsøkene (1,5 sek pause). Håndterer GitHub API-caching og ensure-uuids race condition usynlig for brukeren
 
+### ✅ Slett-dialog – polling og UX-fiks
+
+- **Tittel med doble quotes:** `{{ .Title | jsonify }}` i `edit-switcher.html` sender `"tittel"` med omsluttende quotes. Strippes nå i `openDeleteDialog` (samme fix som qe-dialog tittel): `title.replace(/^"(.*)"$/, '$1')`
+- **Statustekst:** «Bygger…» / «Bygging av nettstedet starter om litt…» erstattet med «Nettsted oppdateres (x sek)…» med elapsed-sekunder
+- **Polling – GH Actions API erstattet med URL 404-poll:** `pollBuild` brukte `startGhPoll` (2 sek intervall, treig GH API). Erstattet med same-origin HEAD-poll mot nåværende side-URL (`window.location.href`) som venter på HTTP 404 – siden forsvinner fra CF CDN når bygget er ferdig. Mønster: 200→404 (omvendt av ny-side: 404→200). Ventetid: tilnærmet null etter grønt bygg, typisk 1–5 sek (pollintervall 1 sek).
+
+### ✅ np-dialog – Opprett-knapp grå ved innsending
+
+`submitBtn.style.background = '#888'; submitBtn.style.cursor = 'default'` lagt til når knappen settes til «Oppretter…». Nullstilles i catch-blokken ved feil. Konsistent med «Lagret»-knappen i qe-dialog.
+
+### ✅ Statustekst – fontstørrelse økt
+
+`font-size:.85rem` → `font-size:1rem` på `#np-status-text` og `#qe-status-text` i `edit-switcher.html`. Opacity justert `.8` → `.85`.
+
 ### Veikart: Bygg-status-sperre og Lukk-knapp
 
 Ny veikart-oppføring: `veikart/bygg-status-sperre/`. Noterer:

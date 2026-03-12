@@ -3,8 +3,10 @@ id: 48786489-5903-424e-a73c-43ca6cda3ec1
 title: "Bygg-status-sperre og riktig Lukk-knapp"
 linkTitle: "Bygg-status og Lukk-knapp"
 weight: 35
-status: "Ny"
+status: "Godkjent"
 ---
+
+**Implementert 2026-03-12.** Begge delene er gjennomført i temaet (`custom-footer.html` og `edit-switcher.html`).
 
 Når brukeren trykker Lagre i redigeringsdialogen, sendes en commit til GitHub og et bygg starter automatisk. Knappen som i dag heter **«Avbryt»** er misvisende fordi commiten ikke kan angres – byggejobben fortsetter uavhengig av om dialogen lukkes.
 

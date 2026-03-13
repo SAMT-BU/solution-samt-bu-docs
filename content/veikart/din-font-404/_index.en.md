@@ -1,5 +1,5 @@
 ---
-id: ""
+id: 50345854-27d8-4b1c-8f78-a6d036501284
 title: "Remove 404 errors for DIN web fonts"
 linkTitle: "DIN font 404 errors"
 weight: 35

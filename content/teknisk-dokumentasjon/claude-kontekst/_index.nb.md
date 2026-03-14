@@ -1198,3 +1198,78 @@ GitHub API returnerer `triggering_actor.login` for hvert workflow-run. Filtrerin
 | GitHub API rate limit | `checkCompletions()` feiler stille i `.catch()` – spinner forblir, ingen krasj |
 | Build feilet (`conclusion != 'success'`) | Telles ikke som `myCompleted` → counter decrementeres ikke → bruker må manuelt rydde |
 | > 10 min uten bygg | `firstSaveAt`-sjekken rydder state automatisk |
+
+---
+
+## Automatisert testing – verktøy og pipeline
+
+### Installert og klar (2026-03-14)
+
+| Verktøy | Versjon | Plassering |
+|---------|---------|------------|
+| Python | 3.12.10 | `C:\Users\Win11_local\AppData\Local\Programs\Python\Python312\python.exe` |
+| Playwright | 1.58.0 | Installert via pip |
+| Chromium | 145 (playwright) | `C:\Users\Win11_local\AppData\Local\ms-playwright\chromium-1208` |
+| python-dotenv | 1.2.2 | Installert via pip |
+
+**Kjørekommando (fra `tools/playwright/`):**
+```powershell
+C:\Users\Win11_local\AppData\Local\Programs\Python\Python312\python.exe test_pending_indicator.py
+```
+
+### E2E-test A: Pending-indikator (`test_pending_indicator.py`)
+
+**Fil:** `samt-bu-docs/tools/playwright/test_pending_indicator.py`
+**Konfigurasjon:** `tools/playwright/.env` (i .gitignore – aldri commit)
+
+```ini
+GITHUB_TOKEN=<hent fra localStorage 'samt-bu-gh-token' i nettleseren>
+GITHUB_USER=erikhag1
+SAMTU_BASE_URL=https://samt-bu-docs.pages.dev
+TEST_PAGE=/om/om-samt-bu/
+HEADLESS=false
+SLOW_MO=400
+```
+
+**Slik henter du token:** Åpne `samt-bu-docs.pages.dev` i nettleseren → F12 → Application → Local Storage → `samt-bu-gh-token`.
+
+**Hva testes (9 steg):**
+1. Last nettstedet
+2. Injiser token i localStorage (ingen OAuth-popup)
+3. Åpne Endre-meny (`#edit-toggle` → `#edit-menu`)
+4. Åpne redigeringsdialog (`#qe-overlay`)
+5. Gjør endring (zero-width space – usynlig for lesere)
+6. Lagre og observer pending-indikator (`#qe-job-indicator`)
+7. Naviger til annen side – verifiser at indikator gjenopprettes
+8. Poll hvert 15 sek og observer nedtelling per ferdig bygg
+9. Verifiser at indikator forsvinner og localStorage er ryddet
+
+**Output:** Screenshots i `tools/playwright/screenshots/<tidsstempel>/` med rød highlight-ramme rundt relevante elementer.
+
+**Neste steg for testen:**
+- Kjør og se at alle 9 steg fungerer
+- Juster selektorer om noe feiler (skriptet printer tydelig hvilket steg)
+- Legg til test for count=2 (to raske saves)
+
+### Planlagte testtyper (ikke implementert ennå)
+
+**B) Smoke-test** – rask verifisering av at nettstedet laster, meny vises, dialog åpner seg.
+
+**C) GitHub API-enhetstest (Python Requests)** – tester `triggering_actor`-filtrering og pending-logikk direkte mot GitHub API uten nettleser.
+
+### Demo-video pipeline (planlagt)
+
+Målet er å produsere dokumentasjonsvideoer og brukerveiledninger automatisk.
+
+**Steg 1 – Skjermopptak:** Playwright recorder (`record_video_dir`) produserer `.webm` av hele testforløpet.
+
+**Steg 2 – Lyd:** ElevenLabs (gratis tier: 10 000 tegn/mnd ≈ 10–15 min tale). Stemmekloning fra ~1 min opptak av din stemme. Output: MP3/WAV.
+
+**Steg 3 – Komposisjon:** FFmpeg legger lyden over skjermvideoen:
+```bash
+ffmpeg -i screen.webm -i narration.mp3 -c:v copy -c:a aac -shortest demo_final.mp4
+```
+
+**Steg 4 (fremtidig) – Talking head overlay:** D-ID eller HeyGen animerer et bilde til å snakke (lipsync mot ElevenLabs-lyden) og FFmpeg legger det inn som picture-in-picture.
+
+**Rekkefølge:** Playwright → ElevenLabs lyd → FFmpeg → (D-ID avatar). Steg 1–3 er klar til implementering etter at E2E-testen fungerer.

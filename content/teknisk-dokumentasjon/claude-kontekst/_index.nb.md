@@ -1273,3 +1273,80 @@ ffmpeg -i screen.webm -i narration.mp3 -c:v copy -c:a aac -shortest demo_final.m
 **Steg 4 (fremtidig) – Talking head overlay:** D-ID eller HeyGen animerer et bilde til å snakke (lipsync mot ElevenLabs-lyden) og FFmpeg legger det inn som picture-in-picture.
 
 **Rekkefølge:** Playwright → ElevenLabs lyd → FFmpeg → (D-ID avatar). Steg 1–3 er klar til implementering etter at E2E-testen fungerer.
+
+---
+
+## Endringslogg – 2026-03-14 (sesjon 2)
+
+### ✅ TipTap selvhostet bundle – esm.sh eliminert
+
+**Problem:** «Kunne ikke laste editoren» dukket opp igjen. Konsoll-feil: `SyntaxError: Unexpected token '}'`. Alle 9 esm.sh-importer feilet, inkludert `tiptap-markdown@0.8.10` som hadde fungert dagen før.
+
+**Rotårsak:** esm.sh endret internt hvordan modul-filer genereres. Nye filer inneholder relative sub-importer med `^` i URL-path, f.eks.:
+```
+import "/@tiptap/pm@^2.7.0/commands?target=es2022"
+import "prosemirror-state@^1.4.3?target=es2022"
+```
+Nettleseren URL-encoder `^` til `%5E` når den følger disse importene. esm.sh router ikke `%5E` riktig → returnerer JSON-feilmelding → nettleseren forsøker å parse JSON som JS → `SyntaxError: Unexpected token '}'` (siste tegn i `{"error":"..."}`).
+
+**Viktig:** Dette rammer ALLE TipTap-versjoner (2.26.0 og 2.27.2 verifisert), fordi alle avhenger av ProseMirror med `^`-ranges. Det er en esm.sh platform-bug, ikke et TipTap-versjonsproblem.
+
+**Fix: selvhostet prebygd bundle**
+
+Byggesett opprettet i `samt-bu-docs/tools/tiptap-build/`:
+
+| Fil | Innhold |
+|-----|---------|
+| `package.json` | TipTap 2.26.0 + tiptap-markdown 0.8.10 + esbuild |
+| `entry.js` | Eksporterer Editor, StarterKit, Table*, Link, Image, Markdown |
+| `.gitignore` | Ekskluderer `node_modules/` |
+
+Bundle bygges med:
+```bash
+cd tools/tiptap-build
+npm install
+node_modules/.bin/esbuild entry.js --bundle --format=esm --minify --outfile=../../static/js/tiptap-bundle.js
+```
+
+Output: `static/js/tiptap-bundle.js` (524 KB minifisert, committet til repo, serveres av Cloudflare Pages CDN).
+
+`loadTiptap()` i `custom-footer.html` endret fra 9 parallelle esm.sh-importer til én lokal import:
+```javascript
+import('/js/tiptap-bundle.js').then(function(mod) {
+  window._Tiptap = {
+    Editor: mod.Editor, StarterKit: mod.StarterKit,
+    Table: mod.Table, TableRow: mod.TableRow, ...
+  };
+  ...
+})
+```
+
+**Fordeler:**
+- Ingen ekstern CDN-avhengighet
+- Raskere lasting (én request, Cloudflare CDN-cached, same-origin)
+- Ingen versjonsdrift – bundle oppdateres kun ved eksplisitt byggsteg
+- Eliminerer hele klassen av esm.sh-problemer permanent
+
+**Oppdatere TipTap i fremtiden:**
+1. Endre versjoner i `tools/tiptap-build/package.json`
+2. `npm install` i den mappen
+3. Kjør esbuild-kommandoen over
+4. Commit `static/js/tiptap-bundle.js` + `package.json` + `package-lock.json`
+5. Push → Cloudflare Pages deployer automatisk
+
+**Versjoner i bundle:** `@tiptap/*@2.26.0`, `tiptap-markdown@0.8.10`
+
+---
+
+### ✅ Playwright E2E-test – første kjøring
+
+Første vellykkede kjøring av `tools/playwright/test_pending_indicator.py`:
+- Alle 9 steg fullførte
+- TipTap-timeout økt fra 8000ms til 25000ms (CDN-lasting tar lengre tid)
+- `.env` konfigurert med `GITHUB_TOKEN` (gho_*), `GITHUB_USER=erikhag1git`
+
+Test-konfigurasjon oppdatert for neste kjøring:
+- `TEST_PAGE=/test-samt-bu-docs/test-1/` (dedikert testside)
+- Steg 5 endret: endrer tittelfeltet (`#qe-field-title`) med tidsstempel-suffix i stedet for usynlig zero-width space
+- Steg 3: screenshot med gul highlight på «Rediger dette kapitlet» i menyen
+- Steg 4: venter på `#qe-field-title` populert i stedet for fast `wait_for_timeout`

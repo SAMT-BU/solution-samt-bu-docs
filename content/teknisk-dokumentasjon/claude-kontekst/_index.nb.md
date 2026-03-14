@@ -1417,3 +1417,65 @@ Ren baseline for videre demo- og testutvikling:
 1. Legg til forklaringstekster (bobler) på kontrollert måte – posisjon og timing defineres eksplisitt
 2. Tale/voiceover – vurderes når visuell demo er ferdigstilt
 3. Vurder om skriptet skal splittes i «test» (automatisert verifisering) og «demo» (visuell presentasjon)
+
+---
+
+## Endringslogg – 2026-03-14 (sesjon 3 – memory og automatisering)
+
+### Memory-system etablert og dokumentert
+
+**Bakgrunn:** MEMORY.md hadde vokst til 224 linjer (grense: 200). Sesjonen ryddet opp og etablerte et robust, trelags memory-system.
+
+#### Ny filstruktur under `C:\Users\Win11_local\.claude\projects\...\memory\`
+
+| Fil | Innhold |
+|-----|---------|
+| `MEMORY.md` | Kompakt indeks – 135 linjer, god buffer. Inneholder 6 kritiske enkeltlinjer som alltid leses. |
+| `critical-notes.md` | Alt fra «Kritiske aldri glem» + «Sidebar-mønstre» – tematisk organisert i 6 seksjoner |
+| `session-start-prompts.md` | To varianter av oppstartsprompt (A: kort / B: eksplisitt) |
+| `cms-routing.md` | Uendret – rutinglogikk for edit-switcher |
+
+**Trelags sikkerhetsmodell:**
+1. 6 kritiske enkeltlinjer i MEMORY.md (auto-lastet, alltid synlig)
+2. `critical-notes.md` i sesjonsstart-lista (eksplisitt ved oppstart)
+3. Full detalj i `claude-kontekst/` (ved behov)
+
+### `erikhag1git/claude-memory` – privat GitHub-repo
+
+Opprettet `https://github.com/erikhag1git/claude-memory` (privat) for versjonskontroll av memory-filene.
+
+**Begrunnelse for valg:** Memory-filene er personlige (maskinstier, instruksjoner til Claude) og tilhører `erikhag1git`, ikke `SAMT-X`-org-en. Prosjektkunnskap (claude-kontekst, veikart) forblir i `solution-samt-bu-docs`.
+
+**Lokal plassering:** `S:\app-data\github\erikhag1git-repos\claude-memory\`
+
+```
+claude-memory/
+├── README.md          ← full dokumentasjon av systemet
+└── samt-bu-docs/      ← kopi av de 4 memory-filene
+```
+
+### Automatisk synkronisering – to lag
+
+**A – Claude Code PostToolUse-hook:**
+- Konfigurert i `C:\Users\Win11_local\.claude\settings.json`
+- Matcher `Write|Edit` → leser `tool_input.file_path` fra stdin JSON
+- Kjører `sync-memory.ps1` – sjekker om endret fil er i memory-mappen, kopierer + committer + pusher kun hvis ja
+- Avslutter stille uten å gjøre noe for alle andre filer
+
+**B – Windows Task Scheduler:**
+- Oppgavenavn: «Claude Memory Sync - samt-bu-docs»
+- Kjøres hvert 30. minutt, uavhengig av Claude Code
+- Plukker opp manuelle endringer og edge cases
+
+**Sync-script:** `C:\Users\Win11_local\.claude\hooks\sync-memory.ps1`
+Krever `-ExecutionPolicy Bypass` pga. Windows standard policy.
+
+### Veikart-oppføringer som bør oppdateres
+
+To veikart-oppføringer i `solution-samt-bu-docs` er utdaterte og bør revideres:
+- `ny-side-samme-nivaa/` – beskriver GitHub-lenke-tilnærming som ble erstattet av den implementerte dialogen
+- `ny-cms-portal/` – refererer til Decap CMS (fjernet 2026-03-11)
+
+### Ryddet opp
+
+- 4 untrackede screenshot-mapper slettet (`20260314_184838/`, `_191326/`, `_193537/`, `_210104/`)

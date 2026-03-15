@@ -1513,4 +1513,34 @@ To veikart-oppføringer i `solution-samt-bu-docs` er utdaterte og bør revideres
 
 ### Ryddet opp
 
+## Endringslogg – 2026-03-15 (sesjon 4)
+
+### Fullført i denne sesjonen
+
+**«Sist endret av»-visning på alle sider:**
+- `header.html` (tema): Nytt Hugo-template som henter `last_editor` fra frontmatter, med fallback til `.GitInfo.AuthorName`. Vises som «av <navn>» inline i lastmod-span med `color:#aaa; font-size:0.85em`.
+- `inject-lastmod.py` (CI-skript): Utvidet med `get_author()` funksjon (git log `%aN`) og `last_editor:` injeksjon i modulinnhold-frontmatter.
+- Disse to endringene dekker alle sider: lokale sider via GitInfo, modulinnhold via CI-injeksjon.
+
+**Playwright test B (to ventende jobber):**
+- Ny testfil: `tools/playwright/test_two_pending_jobs.py`
+- Demonstrerer 2 redigeringer i kø (count 1→2), deretter begge bygg fullfører (2→1→0)
+- `do_edit_and_save()` hjelpefunksjon – gjenbrukbar på tvers av sider
+- Navigasjon via `page.goto()` (ikke sidebar-klikk) – sidebar kollapser etter auto-reload
+
+**Vekt-refaktorering (10-inkrement):**
+- Python-skript `reweight_content.py` kjørt: 155 filer endret på tvers av 5 repoer
+- Manuell korreksjon av singleton-grupper: `samt-bu-drafts` root→90, `team-semantics` root→20
+- `custom-footer.html`: vekt-inkrement endret fra +1 til +10 i `fetchSiblingWeightUpdates`
+- Alle commits pushet: samt-bu-docs (118 filer), team-architecture (1 fil), team-semantics (2 filer), solution-samt-bu-docs (34 filer)
+
+**viewer.html (Playwright HTML-viewer):**
+- Klikk på videoelement toggler spill/pause (`cursor: pointer` + click-handler)
+- Hint-tekst oppdatert
+
+### Viktig lærdom: Vekt-singleton-fallgruve
+
+Modulrepo-rot `_index.nb.md`-filer er singletons i sin egen repo, men vektene styrer rekkefølgen i modernettsstedet. Reweight-skript som behandler singletons som «gruppe» og tildeler dem vekt 10, bryter navigasjonsrekkefølgen. **Løsning:** Ikke kjør automatisk reweight på modulrot-filer – sett dem manuelt.
+
+
 - 4 untrackede screenshot-mapper slettet (`20260314_184838/`, `_191326/`, `_193537/`, `_210104/`)

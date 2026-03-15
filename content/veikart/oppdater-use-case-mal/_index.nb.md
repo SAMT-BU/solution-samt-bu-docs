@@ -2,7 +2,7 @@
 id: d70c1f62-ae4a-4b7b-b35a-87d6fcd1524a
 title: "Oppdater use case-mal med «Innspill til løsningsvalg»"
 linkTitle: "Oppdater use case-mal"
-weight: 30
+weight: 50
 status: "Tidlig utkast"
 ---
 

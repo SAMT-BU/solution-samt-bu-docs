@@ -2,7 +2,7 @@
 id: 4b8f4c1b-8472-468d-9cd0-37dca86564e8
 title: "Adding a new CMS portal"
 linkTitle: "New CMS portal"
-weight: 30
+weight: 40
 status: "New"
 ---
 

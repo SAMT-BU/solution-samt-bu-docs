@@ -2,7 +2,7 @@
 id: e40c2b29-8643-4556-9860-dc72cde6a1d4
 title: "GitHub-autentisering uavhengig av CMS-valg"
 linkTitle: "GitHub-auth – CMS-uavhengig"
-weight: 50
+weight: 120
 status: "Godkjent"
 # Gyldige verdier: Ny | Tidlig utkast | Pågår | Til QA | Godkjent | Avbrutt
 ---

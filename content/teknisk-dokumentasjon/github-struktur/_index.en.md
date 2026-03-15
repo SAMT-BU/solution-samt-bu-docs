@@ -2,7 +2,7 @@
 id: e0e03dc4-b617-44cb-b829-a47ac7313a9d
 title: "Concept for GitHub Organizations and Repositories"
 linkTitle: "GitHub structure"
-weight: 30
+weight: 20
 status: "Early draft"
 ---
 

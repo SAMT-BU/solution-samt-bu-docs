@@ -2,7 +2,7 @@
 id: b8d34d8b-1d6c-47d8-bbb6-da553b138c56
 title: "Folder structure for inputs in samt-bu-files"
 linkTitle: "Inputs – folder structure"
-weight: 40
+weight: 100
 status: New
 # Valid status values: Ny | Tidlig utkast | Pågår | Til QA | Godkjent | Avbrutt
 ---

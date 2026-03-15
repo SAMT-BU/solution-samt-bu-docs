@@ -2,7 +2,7 @@
 id: 4b8f4c1b-8472-468d-9cd0-37dca86564e8
 title: "Legge til ny CMS-portal"
 linkTitle: "Ny CMS-portal"
-weight: 30
+weight: 40
 status: "Ny"
 ---
 

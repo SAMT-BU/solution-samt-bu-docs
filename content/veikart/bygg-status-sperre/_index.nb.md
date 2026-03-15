@@ -2,7 +2,7 @@
 id: f3d81db8-2b95-4a63-a1ab-49939bbd9d29
 title: "Bygg-status-sperre og riktig Lukk-knapp"
 linkTitle: "Bygg-status og Lukk-knapp"
-weight: 35
+weight: 70
 status: "Godkjent"
 ---
 

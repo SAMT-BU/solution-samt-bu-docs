@@ -2,7 +2,7 @@
 id: ad913fd8-a039-4bd6-9dca-05d50f457a07
 title: "User Guide"
 linkTitle: "User Guide"
-weight: 5
+weight: 10
 ---
 
 This section is a practical guide for editors and contributors working with content in SAMT-BU Docs. It goes deeper than the general [How to Contribute](/samt-bu-docs/om/hvordan-bidra/)-page and covers workflow, CMS functionality, and handling situations where multiple people edit at the same time.

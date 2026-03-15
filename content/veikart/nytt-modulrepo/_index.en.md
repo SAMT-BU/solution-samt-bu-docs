@@ -4,7 +4,7 @@ title: "Creating a new module repository – step by step"
 linkTitle: "New module repo"
 weight: 30
 status: "New"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

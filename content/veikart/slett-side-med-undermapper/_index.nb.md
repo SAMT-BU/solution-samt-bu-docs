@@ -4,7 +4,7 @@ title: "Slett side – håndtering av undermapper"
 linkTitle: "Slett side med undermapper"
 weight: 60
 status: "Ny"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

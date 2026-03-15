@@ -4,6 +4,8 @@ title: "CI-injeksjon av last_editor for ikke-CMS-redigeringer"
 linkTitle: "CI: last_editor for alle redigeringsveier"
 weight: 75
 status: "Ny"
+last_editor: erikhag1git (Erik Hagen)
+
 ---
 
 ## Bakgrunn

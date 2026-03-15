@@ -4,7 +4,7 @@ title: "Bygg-status-sperre og riktig Lukk-knapp"
 linkTitle: "Bygg-status og Lukk-knapp"
 weight: 70
 status: "Godkjent"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

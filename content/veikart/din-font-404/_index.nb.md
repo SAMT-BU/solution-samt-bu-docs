@@ -4,7 +4,7 @@ title: "Fjern 404-feil for DIN-webfonter"
 linkTitle: "DIN-font 404-feil"
 weight: 80
 status: "Ny"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

@@ -4,7 +4,7 @@ title: "Helper scripts"
 linkTitle: "Helper scripts"
 weight: 90
 status: "New"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

@@ -4,7 +4,7 @@ title: "Delete page – handling sub-pages"
 linkTitle: "Delete page with sub-pages"
 weight: 60
 status: "New"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

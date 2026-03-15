@@ -3,7 +3,7 @@ id: d9520a6b-e499-4554-961d-86a7bacc5550
 title: "Synkronisering og konflikthåndtering"
 linkTitle: "Synkronisering"
 weight: 20
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

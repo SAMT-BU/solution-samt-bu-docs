@@ -4,7 +4,7 @@ title: "Opprette nytt modulrepo – steg-for-steg"
 linkTitle: "Nytt modulrepo"
 weight: 30
 status: "Ny"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

@@ -3,7 +3,7 @@ id: a1dec965-c693-4bbd-a231-1162fb4306ef
 title: "Utviklernotater og Claude-kontekst"
 linkTitle: "Utviklernotater"
 weight: 50
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

@@ -4,7 +4,7 @@ title: "Legg til underkapittel – valg i Endre-menyen"
 linkTitle: "Legg til underkapittel"
 weight: 10
 status: "Godkjent"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

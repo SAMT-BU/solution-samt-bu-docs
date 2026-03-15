@@ -4,7 +4,7 @@ title: "Legge til ny CMS-portal"
 linkTitle: "Ny CMS-portal"
 weight: 40
 status: "Ny"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

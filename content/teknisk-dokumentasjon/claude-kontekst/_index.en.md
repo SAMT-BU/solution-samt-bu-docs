@@ -3,7 +3,7 @@ id: a1dec965-c693-4bbd-a231-1162fb4306ef
 title: "Developer notes and Claude context"
 linkTitle: "Developer notes"
 weight: 50
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

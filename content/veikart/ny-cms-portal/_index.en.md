@@ -4,7 +4,7 @@ title: "Adding a new CMS portal"
 linkTitle: "New CMS portal"
 weight: 40
 status: "New"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

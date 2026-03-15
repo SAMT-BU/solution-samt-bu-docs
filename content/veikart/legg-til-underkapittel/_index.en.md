@@ -4,7 +4,7 @@ title: "Add sub-chapter – option in the Edit menu"
 linkTitle: "Add sub-chapter"
 weight: 10
 status: "Early draft"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

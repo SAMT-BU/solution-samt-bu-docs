@@ -5,7 +5,7 @@ linkTitle: "Innspill – mappestruktur"
 weight: 100
 status: Ny
 # Gyldige statusverdier: Ny | Tidlig utkast | Pågår | Til QA | Godkjent | Avbrutt
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

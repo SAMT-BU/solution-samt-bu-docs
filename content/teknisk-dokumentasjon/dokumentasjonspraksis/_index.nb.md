@@ -4,7 +4,7 @@ title: "Dokumentasjonspraksis"
 linkTitle: "Dokumentasjonspraksis"
 weight: 30
 status: "Tidlig utkast"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

@@ -4,7 +4,7 @@ title: "Hjelpescripter"
 linkTitle: "Hjelpescripter"
 weight: 90
 status: "Ny"
-last_editor: Erik Hagen
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 

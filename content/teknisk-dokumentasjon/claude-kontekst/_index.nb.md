@@ -1668,3 +1668,57 @@ Ny fil i `C:\Users\Win11_local\.claude\projects\...\memory\`. Inneholder:
 2. CI-lyd-kommandoen (bash + PowerShell) med de tre lydsignalene
 
 **Why:** Brukeren måtte eksplisitt be om `frontend-design`-skill ved et CSS-layoutproblem – noe den er spesiallaget for.
+
+---
+
+## Endringslogg – 2026-03-16 (sesjon 2)
+
+### ✅ GUI-lydsignaler – fullstendig implementert og testet
+
+**Filer:** `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html`
+
+#### Arkitektur
+
+Tre lydfunksjoner i global `<script>`-blokk (over poll-funksjonene):
+
+| Funksjon | Lyd | Tale | Kalt fra |
+|----------|-----|------|----------|
+| `samtuPlayStart()` | 600+900 Hz opptakt | «Build job started» | `startGhPoll`, `startUrlPoll`, ETag-polling |
+| `samtuPlaySuccess()` | C5–E5–G5–C6 fanfare | «Build job complete» | Inline i ETag-deteksjon, `startGhPoll`, `startUrlPoll` |
+| `samtuPlayFailure()` | 400→300→220 Hz wah-wah | «Build job failed» | ETag-timeout, `startGhPoll` feil, `startUrlPoll` timeout |
+
+Felles hjelpefunksjoner:
+- `_samtuPlayNotes(notes)` – Web Audio API, ADSR-envelope (attack 20ms, sustain, release 30–80ms), returnerer total ms-varighet
+- `_samtuSpeak(text, delayMs)` – `SpeechSynthesisUtterance` med forsinkelse slik at tale alltid kommer **etter** lydsignalet
+
+#### Tre rotnårsaker som ble funnet og fikset
+
+**1. ETag-polling-stien manglet lyder helt:**
+`pollQeBuild` bruker ETag-basert `setInterval` som primærvei (ikke `startGhPoll`). `startGhPoll` er kun fallback uten ETag. Lyder måtte legges til direkte i ETag-stien.
+
+**2. `doNav()` ble kalt synkront → AudioContext stoppet:**
+`samtuPlaySuccess()` kaller `_samtuAudioCtx.resume().then(...)` – en microtask. Umiddelbart etter ble `doNav()` kalt synkront → `window.location.href` trigget navigasjon → AudioContext destruert før microtask-køen rakk å starte notene.
+
+Fix:
+- Dialog **lukket**: `setTimeout(doNav, 1600)` – gir fanfaren (1.35s) tid til å spille
+- Dialog **åpen**: nedtelling økt fra 2s til 3s – dekker fanfare + tale
+
+**3. Enkeltnoter hørtes som «blipp»:**
+Opprinnelig envelope: `setValueAtTime(0.28) → exponentialRamp(0.001)` med 0.12s varighet → brå decay, ingen sustain.
+
+Fix: ADSR-envelope med `linearRamp` attack + `setValueAtTime` sustain + `exponentialRamp` release. Notevarigheter økt: 0.22s × 3 + 0.60s for fanfare.
+
+**4. Tale avbrøt lydsignalet (parallell avspilling):**
+Tale ble startet parallelt med lydsignal via `speechSynthesis.speak()`. Fix: `_samtuSpeak(text, delayMs)` med `setTimeout` basert på returnert ms-varighet + 150ms buffer.
+
+#### Lydparametre (endelige)
+
+| Lyd | Toner (Hz) | Tidsoffsets (s) | Varighet per note (s) | Tale starter etter |
+|-----|-----------|----------------|----------------------|-------------------|
+| Start | 600, 900 | 0, 0.15 | 0.12, 0.20 | ~500ms |
+| Suksess | 523, 659, 784, 1047 | 0, 0.25, 0.50, 0.75 | 0.22, 0.22, 0.22, 0.60 | ~1500ms |
+| Feil | 400, 300, 220 | 0, 0.28, 0.56 | 0.25, 0.25, 0.55 | ~1260ms |
+
+#### `samtuUnlockAudio()` – forutsetning
+
+Kalles under brukergestus (lagre-klikk / form submit) for å opprette og aktivere `AudioContext` og låse opp `speechSynthesis`. Uten dette vil alle lydfunksjoner feile stille (autoplay policy). Kalles i `#qe-save-btn` click-handler og `#np-form` submit-handler.

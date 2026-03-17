@@ -8,51 +8,103 @@ last_editor: erikhag1git (Erik Hagen)
 
 ---
 
-Målbildet er å gi brukerne enkel oversikt over egne og andres jobber i kø – både de som venter på push og de som er åpnet for redigering – med en kompakt statusindikator (nederst til venstre) og mulighet til å klikke seg til ytterligere detaljer.
+Målbildet er å gi brukerne enkel oversikt over egne og andres jobber i kø – med en kompakt statusindikator (nederst til venstre) og en hendelsesfeed (nederst til høyre) med lyd og historikk.
 
 ## Observert oppførsel (utgangspunkt 2026-03-17)
 
-Tre tilstander og én bug:
-
 1. **Dialog åpen, bygg startet:** «Nettsted oppdateres (N sek)...» i dialogheaderen + lydsignal ved start. Fungerer bra.
-2. **Dialog lukket, samme side:** `#qe-job-indicator` viser «Oppdateringsjobb pågår» – generisk, ingen info om hvem, tid eller antall.
-3. **Navigert til ny side mens bygg pågår:** Indikatoren viser «1 endring bygges...» (fra `samtuShowPendingIndicatorWithTotal`). Antall fra min pending-state, totalt aktive på GitHub i parentes – men ingen klar skille mellom «mine» og «andres» bygg.
+2. **Dialog lukket, samme side:** `#qe-job-indicator` viser generisk tekst – ingen info om hvem, tid eller antall.
+3. **Navigert til ny side mens bygg pågår:** Indikatoren viser enkel teller uten skille mellom kjørende og ventende, og uten elapsed-tid.
 4. **Bug – lyd uteblir etter navigering:** Lydsignalet for «ferdig bygg» spilles ikke når brukeren har navigert til en ny side.
 
 ---
 
-## Steg 1 – Lydsignal ved ferdig bygg etter navigering ← NESTE
+## Steg 1 – Lydsignal ved ferdig bygg etter navigering ✅ FULLFØRT (2026-03-17)
 
-**Status:** Ikke startet
+**Rotårsak (løst):**
 
-**Rotårsak:** To separate problemer:
+1. `samtuPlaySuccess()` ble aldri kalt i `checkCompletions()` completion-branchen.
+2. `_samtuAudioCtx` var `null` på ny side (opprettes kun under brukergestus på forrige side).
 
-1. `samtuPlaySuccess()` kalles **aldri** i resume-sporet. Koden i `checkCompletions()` (linje ~345–348 i `custom-footer.html`) gjør kun `samtuDecrementPending()` + `window.location.href = ...` – ingen lyd.
-2. `_samtuAudioCtx` er `null` på den nye siden (opprettes kun i `samtuUnlockAudio()` ved Lagre-klikk på *forrige* side). `_samtuPlayNotes()` returnerer tidlig hvis `_samtuAudioCtx` er null.
+**Implementert fix:**
 
-**Planlagt fix:**
+- `checkCompletions()` completion-branch kaller nå `samtuPlaySuccess()` + 1800ms forsinkelse før reload.
+- `_samtuPlayNotes()` forsøker å opprette ny `AudioContext` hvis den er `null` (Chrome tillater dette for origins med høy brukerengasjement).
+- `samtuShowDoneIndicator()` vises alltid som visuell fallback.
 
-- I `checkCompletions()` completion-branchen: kall `samtuPlaySuccess()` + legg inn ~1800ms forsinkelse før `window.location.href`-reload
-- I `_samtuPlayNotes()`: forsøk å opprette ny AudioContext hvis den er null (Chrome tillater dette for origins med høy brukerengasjement)
-- Fallback: visuell «Endringer publisert – klikk for å laste inn»-indikator (allerede implementert i `samtuShowDoneIndicator()`) vises alltid uavhengig av om lyden spilles
-
-**Filer som endres:**
+**Filer endret:**
 - `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html`
 
 ---
 
-## Steg 2 – Rikere statusinformasjon
+## Steg 2 – Rikere statusinformasjon (bottom-left) ← PÅGÅR
 
-**Status:** Ikke startet
+### 2a – Elapsed + actor ✅ FULLFØRT (2026-03-17)
 
-Gjeldende statustekst er for generisk. Ønsket:
+`samtuShowPendingIndicatorWithTotal` viser nå:
 
-- **Hvem:** Brukernavn på den som har endringen i kø (allerede lagret i `actor`-feltet i pending-state)
-- **Tid:** Elapsed siden jobben ble startet (`lastSaveAt` er tilgjengelig i pending-state)
-- **Mine vs. andres:** Tydelig visuell skille – f.eks. «Din endring bygges (45 sek)» vs. «2 andres endringer i kø»
-- **Klikk for detaljer:** Indikatoren kan klikkes og vise en liten popup med full liste
+| Scenario | Tekst |
+|---|---|
+| 1 endring, kjører | `⟳ Din endring bygges · 45 sek` |
+| 1 endring, i kø | `⟳ Din endring i kø · 12 sek` |
+| N endringer, alle kjører | `⟳ N endringer bygges · 1 min` |
+| N kjører, M i kø | `⟳ N bygges · M i kø · 55 sek` |
 
-**Tilgjengelige data i `localStorage`-pending-state:**
+Elapsed beregnes fra `pending.lastSaveAt` og oppdateres automatisk hvert 3. sek (samme som poll-syklusen).
+
+### 2b – Split inProgress/queued ✅ FULLFØRT (2026-03-17)
+
+`checkCompletions()` teller nå `inProgress` og `queued` separat (i stedet for `totalActive`). Fungerer uavhengig av om Cloudflare er på free-tier (1 parallell) eller Pro (5 parallelle) – GitHub Actions API reflekterer sannheten i begge tilfeller.
+
+**Ny signatur:** `samtuShowPendingIndicatorWithTotal(count, inProgress, queued)`
+
+### 2c – Hendelsesfeed + pling (bottom-right) ← NESTE
+
+**Konsept:** Skille mellom *status* (bottom-left, pågående tilstand) og *hendelser* (bottom-right, ting som har skjedd).
+
+**Bottom-right – hendelsespill:**
+- Viser siste hendelse som kompakt pill: `🔔 Erik Hagen endret /om-samt-bu (2 min siden)`
+- Klikk → dropdown med siste 5–10 hendelser (lagret i localStorage)
+- Pling-lyd (én note) ved andres hendelse; fanfare ved egen (eksisterende)
+- Erstatter dagens grønne `#page-update-banner` (som bare viser "Siden er oppdatert" uten kontekst)
+
+**Datakilder:**
+- Egne hendelser: allerede kjent (actor, url, tidspunkt fra pending-state)
+- Andres hendelser: ETag-polling oppdager endring → API-kall mot `/actions/runs?status=completed&per_page=3` for `triggering_actor.login`
+
+**Filer som endres:**
+- `custom-footer.html`: ETag-poll → event-log + pling
+- `edit-switcher.html`: nytt HTML-element for pill + dropdown
+
+---
+
+## Steg 3 – Overordnet statusoversikt for alle brukere
+
+**Status:** Vurderes – settes evt. på roadmap
+
+Sanntidsoversikt over alle aktive bygg på tvers av brukere. Polling av GitHub Actions API + presentasjon av `triggering_actor.login` per run. Mulig implementasjon: klikk på indikatoren åpner dropdown med alle aktive runs.
+
+**Avhengighet:** Krever GitHub-token (allerede tilgjengelig for innloggede brukere).
+
+---
+
+## Teknisk kontekst
+
+Nøkkelfunksjoner i `custom-footer.html`:
+
+| Funksjon | Signatur | Rolle |
+|----------|----------|-------|
+| `samtuIncrementPending()` | – | Kalles ved Lagre – øker pending-teller i localStorage |
+| `samtuDecrementPending()` | – | Kalles ved ferdig bygg – reduserer teller |
+| `samtuShowPendingIndicator(count)` | – | Shorthand, kaller under med `null, null` |
+| `samtuShowPendingIndicatorWithTotal` | `(count, inProgress, queued)` | Oppdaterer `#qe-job-indicator` med rik tekst |
+| `samtuShowDoneIndicator()` | – | Viser «Endringer publisert – klikk for å laste inn» |
+| `samtuPlaySuccess()` | – | Spiller seiersfanfare + tale |
+| `samtuUnlockAudio()` | – | Låser opp AudioContext under brukergestus |
+| `startGhPoll()` | – | GitHub Actions-polling (kjøres på siden der Lagre ble klikket) |
+| `checkCompletions()` | – | Resume-polling ved sideinnlasting (kjøres på ny side) |
+
+**`localStorage`-pending-state:**
 ```json
 {
   "count": 1,
@@ -63,35 +115,4 @@ Gjeldende statustekst er for generisk. Ønsket:
 }
 ```
 
-**Filer som endres:**
-- `custom-footer.html`: `samtuShowPendingIndicatorWithTotal()`, `checkCompletions()`
-- `edit-switcher.html`: evt. ny HTML for detaljpopup
-
----
-
-## Steg 3 – Overordnet statusoversikt for alle brukere
-
-**Status:** Vurderes – settes evt. på roadmap
-
-Separat liten statusvisning som viser alle aktive bygg på tvers av brukere, ikke bare din. Krever polling av GitHub Actions API og presentasjon av `triggering_actor.login` per run.
-
-Mulig implementasjon: Klikk på indikatoren åpner en liten dropdown med liste over alle aktive runs, hvem som trigget dem, og status.
-
-**Avhengighet:** Krever GitHub-token (allerede tilgjengelig for innloggede brukere).
-
----
-
-## Teknisk kontekst
-
-Nøkkelfunksjoner i `custom-footer.html`:
-
-| Funksjon | Rolle |
-|----------|-------|
-| `samtuIncrementPending()` | Kalles ved Lagre – øker pending-teller i localStorage |
-| `samtuDecrementPending()` | Kalles ved ferdig bygg – reduserer teller |
-| `samtuShowPendingIndicatorWithTotal(count, total)` | Oppdaterer `#qe-job-indicator` |
-| `samtuShowDoneIndicator()` | Viser «Endringer publisert – klikk for å laste inn» |
-| `samtuPlaySuccess()` | Spiller seiersfanfare + tale |
-| `samtuUnlockAudio()` | Låser opp AudioContext under brukergestus |
-| `startGhPoll()` | GitHub Actions-polling (kjøres på siden der Lagre ble klikket) |
-| `checkCompletions()` | Resume-polling ved sideinnlasting (kjøres på ny side) |
+**`#page-update-banner`** (bottom-right, grønn): ETag-basert bakgrunnspolling hvert 45. sek. Vises kun ved andres endringer (når ingen egne pending). Skal erstattes av hendelsespill i steg 2c.

@@ -37,9 +37,22 @@ Målbildet er å gi brukerne enkel oversikt over egne og andres jobber i kø –
 
 ---
 
-## Steg 2 – Rikere statusinformasjon (bottom-left) ← PÅGÅR
+## Steg 2 – Rikere statusinformasjon (bottom-left) ← NESTE (rullet tilbake, se under)
 
-### 2a – Elapsed + actor ✅ FULLFØRT (2026-03-17)
+### 2a – Elapsed + actor ⚠ RULLET TILBAKE (2026-03-17)
+
+Utviklet og testet, men rullet tilbake pga. bugs i kombinasjon med 2b/2c. Kode tilgjengelig på commit `9593675` i `hugo-theme-samt-bu`. Kan rulles frem med `git reset --hard 9593675 && git push --force` i temaet, etterfulgt av submodule-oppdatering i `samt-bu-docs`.
+
+**Kjente bugs som må løses før re-deploy:**
+
+1. **Race-condition:** `pollQeBuild` (ETag-poll i dialogen) og `checkCompletions` (GitHub API-poll ved sideinnlasting) kjører parallelt på siste lagrede side. Begge dekrementerer pending-teller, `seenCompleted` blir feil.
+2. **ETag-banner etter eget bygg:** Etter at pending-state ryddes og siden lastes inn på nytt, oppdager ETag-poll at siden er endret (av *vårt eget* bygg) og viser «Siden er oppdatert» som om det er andres endring. Delvis fikset med `sessionStorage._samtuOwnBuildDone`, men ikke tilstrekkelig testet.
+3. **Stuck count ved flere samtidige bygg:** Pending-teller nådde aldri 0 ved 4 raske lagringer i sekvens.
+
+**Anbefalt tilnærming ved re-implementering:**
+- Fjern `seenCompleted`-logikken helt fra `checkCompletions`
+- Bruk «kø-tom»-strategi: når `inProgress=0 && queued=0 && myCompleted > 0` → alt ferdig, rydd opp og last inn
+- Sørg for at `checkCompletions` IKKE starter hvis `_samtuDialogPollActive` er satt
 
 `samtuShowPendingIndicatorWithTotal` viser nå:
 
@@ -52,13 +65,13 @@ Målbildet er å gi brukerne enkel oversikt over egne og andres jobber i kø –
 
 Elapsed beregnes fra `pending.lastSaveAt` og oppdateres automatisk hvert 3. sek (samme som poll-syklusen).
 
-### 2b – Split inProgress/queued ✅ FULLFØRT (2026-03-17)
+### 2b – Split inProgress/queued ⚠ RULLET TILBAKE (se 2a)
 
 `checkCompletions()` teller nå `inProgress` og `queued` separat (i stedet for `totalActive`). Fungerer uavhengig av om Cloudflare er på free-tier (1 parallell) eller Pro (5 parallelle) – GitHub Actions API reflekterer sannheten i begge tilfeller.
 
 **Ny signatur:** `samtuShowPendingIndicatorWithTotal(count, inProgress, queued)`
 
-### 2c – Hendelsesfeed + pling (bottom-right) ← NESTE
+### 2c – Hendelsesfeed + pling (bottom-right)
 
 **Konsept:** Skille mellom *status* (bottom-left, pågående tilstand) og *hendelser* (bottom-right, ting som har skjedd).
 

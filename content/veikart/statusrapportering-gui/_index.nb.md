@@ -10,12 +10,12 @@ last_editor: erikhag1git (Erik Hagen)
 
 Målbildet er å gi brukerne enkel oversikt over egne og andres jobber i kø – med en kompakt statusindikator (nederst til venstre) og en hendelsesfeed (nederst til høyre) med lyd og historikk.
 
-## Observert oppførsel (utgangspunkt 2026-03-17)
+## Observert oppførsel (utgangspunkt 2026-03-17, etter sesjon 5)
 
 1. **Dialog åpen, bygg startet:** «Nettsted oppdateres (N sek)...» i dialogheaderen + lydsignal ved start. Fungerer bra.
-2. **Dialog lukket, samme side:** `#qe-job-indicator` viser generisk tekst – ingen info om hvem, tid eller antall.
-3. **Navigert til ny side mens bygg pågår:** Indikatoren viser enkel teller uten skille mellom kjørende og ventende, og uten elapsed-tid.
-4. **Bug – lyd uteblir etter navigering:** Lydsignalet for «ferdig bygg» spilles ikke når brukeren har navigert til en ny side.
+2. **Dialog lukket / navigert:** `#qe-job-indicator` viser **alltid** en synlig knapp – «Byggehistorikk» i idle-tilstand, byggestatus under aktive bygg.
+3. **Klikk på indikatoren:** Åpner jobbhistorikk-dialog med siste 15 bygg for innlogget bruker (GitHub Actions API).
+4. **Ferdig bygg:** Lydsignal + automatisk navigering, uavhengig av om dialogen er åpen eller lukket.
 
 ---
 
@@ -37,9 +37,36 @@ Målbildet er å gi brukerne enkel oversikt over egne og andres jobber i kø –
 
 ---
 
-## Steg 2 – Rikere statusinformasjon (bottom-left) ← NESTE (rullet tilbake, se under)
+## Steg 2 – Jobbhistorikk og forbedringer ✅ FULLFØRT (2026-03-17, sesjon 5)
 
-### 2a – Elapsed + actor ⚠ RULLET TILBAKE (2026-03-17)
+### 2a – Jobbhistorikk-knapp alltid synlig ✅
+
+`#qe-job-indicator` vises nå permanent (ikke bare under aktive bygg). Idle-tilstand: klokkikon + «Byggehistorikk». Klikk åpner `#job-history-dialog` med siste 15 bygg for innlogget bruker hentet fra GitHub Actions API.
+
+**Implementasjonsdetaljer:**
+- `data-building="1"` settes på indikatoren ved `samtuShowPendingIndicatorWithTotal()`, fjernes ved `samtuShowDoneIndicator()`
+- Bakgrunnspollen (`setInterval` hvert 45. sek) sjekker `qeInd.dataset.building` i stedet for `display !== 'none'` – forhindrer at alltid-synlig indikator blokkerer andres-endringer-banner
+- `samtuIncrementPending()` kaller nå `samtuShowPendingIndicator(newCount)` umiddelbart – indikatoren oppdateres i det du klikker Lagre, ikke først etter dialog-lukking/refresh
+
+### 2b – Minimering fjernet ✅
+
+Minimize-funksjonaliteten (`qe-minimize-pill`, `minimizeQeDialog()`, `⊟`-knappen) er fjernet. Begrunnelse: pillen forsvant ved navigering og ga bare støy med dobbel status. Cancel-knappen heter igjen «Lukk dette vinduet» etter lagring.
+
+### 2c – ETag-timeout økt ✅
+
+`if (++attempts > 90)` → `if (++attempts > 180)` (3 min maks). Fikser falsk «Build job failed»-signal ved bygg som tar > 90 sek.
+
+**Filer endret (sesjon 5):**
+- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html`
+- `themes/hugo-theme-samt-bu/layouts/partials/edit-switcher.html`
+
+---
+
+## Steg 2 (opprinnelig) – Rikere statusinformasjon ⚠ RULLET TILBAKE (2026-03-17, sesjon 4)
+
+*(Historisk referanse – konsepter kan gjenbrukes)*
+
+### 2a – Elapsed + actor ⚠ RULLET TILBAKE
 
 Utviklet og testet, men rullet tilbake pga. bugs i kombinasjon med 2b/2c. Kode tilgjengelig på commit `9593675` i `hugo-theme-samt-bu`. Kan rulles frem med `git reset --hard 9593675 && git push --force` i temaet, etterfulgt av submodule-oppdatering i `samt-bu-docs`.
 
@@ -107,11 +134,11 @@ Nøkkelfunksjoner i `custom-footer.html`:
 
 | Funksjon | Signatur | Rolle |
 |----------|----------|-------|
-| `samtuIncrementPending()` | – | Kalles ved Lagre – øker pending-teller i localStorage |
+| `samtuIncrementPending()` | – | Øker pending-teller i localStorage **og oppdaterer indikatoren umiddelbart** |
 | `samtuDecrementPending()` | – | Kalles ved ferdig bygg – reduserer teller |
-| `samtuShowPendingIndicator(count)` | – | Shorthand, kaller under med `null, null` |
-| `samtuShowPendingIndicatorWithTotal` | `(count, inProgress, queued)` | Oppdaterer `#qe-job-indicator` med rik tekst |
-| `samtuShowDoneIndicator()` | – | Viser «Endringer publisert – klikk for å laste inn» |
+| `samtuShowPendingIndicator(count)` | – | Shorthand, kaller under med `null` |
+| `samtuShowPendingIndicatorWithTotal` | `(count, totalActive)` | Oppdaterer `#qe-job-indicator` med tekst + setter `data-building="1"` |
+| `samtuShowDoneIndicator()` | – | Viser «Endringer publisert – klikk for å laste inn» + fjerner `data-building` |
 | `samtuPlaySuccess()` | – | Spiller seiersfanfare + tale |
 | `samtuUnlockAudio()` | – | Låser opp AudioContext under brukergestus |
 | `startGhPoll()` | – | GitHub Actions-polling (kjøres på siden der Lagre ble klikket) |
@@ -128,4 +155,6 @@ Nøkkelfunksjoner i `custom-footer.html`:
 }
 ```
 
-**`#page-update-banner`** (bottom-right, grønn): ETag-basert bakgrunnspolling hvert 45. sek. Vises kun ved andres endringer (når ingen egne pending). Skal erstattes av hendelsespill i steg 2c.
+**`#qe-job-indicator`** (bottom-left, alltid synlig): Idle → klokkikon + «Byggehistorikk». Under bygg → spinner + «N endringer bygges». Ferdig → lenke «Endringer publisert – klikk for å laste inn». Klikk åpner `#job-history-dialog`. Bakgrunnspoll bruker `data-building`-attributtet for å unngå konflikt med andres-endringer-deteksjon.
+
+**`#page-update-banner`** (bottom-right, grønn): ETag-basert bakgrunnspolling hvert 45. sek. Vises kun ved andres endringer (når ingen egne pending). Kandidat for erstatning av hendelsespill i fremtidig steg (se Steg 3).

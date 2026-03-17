@@ -1722,3 +1722,52 @@ Tale ble startet parallelt med lydsignal via `speechSynthesis.speak()`. Fix: `_s
 #### `samtuUnlockAudio()` – forutsetning
 
 Kalles under brukergestus (lagre-klikk / form submit) for å opprette og aktivere `AudioContext` og låse opp `speechSynthesis`. Uten dette vil alle lydfunksjoner feile stille (autoplay policy). Kalles i `#qe-save-btn` click-handler og `#np-form` submit-handler.
+
+---
+
+## Endringslogg – 2026-03-17 (sesjon 5)
+
+### ✅ «Hvordan bidra»-siden oppdatert
+
+`content/om/hvordan-bidra/_index.nb.md` og `_index.en.md` er omskrevet med presis veiledning for innebygd TipTap-editor – erstatter utdatert Decap CMS-instruksjon. Nytt:
+- Seksjon «Anbefalt: Innebygd redigering» erstatter «Alternativ 1 – CMS»
+- Ny seksjon «Hva du trenger» (GitHub-konto + skrivetilgang)
+- Ny seksjon «Opprette en ny side» med korrekte menynavn («Nytt kapittel etter dette», «Nytt underkapittel»)
+- Tip om bildepaste (Ctrl+V) – ingen dedikert bildeknapp finnes ennå
+- Merknad om pågående arbeid med oversikt over andres redigeringer
+
+### ✅ Jobbhistorikk-knapp – alltid synlig
+
+`#qe-job-indicator` er nå alltid synlig (endret fra `display:none` til `display:flex` i `edit-switcher.html`).
+
+**Idle-tilstand:** `fa-history`-ikon + «Byggehistorikk» / «Build history» med `opacity:.7`.
+
+**Under bygg:** `samtuShowPendingIndicatorWithTotal()` skriver over med spinner + «N endringer bygges…» + setter `data-building="1"`.
+
+**Ferdig:** `samtuShowDoneIndicator()` viser «Endringer publisert – klikk for å laste inn» + fjerner `data-building`.
+
+**Bakgrunnspoll-fix:** Sjekker nå `qeInd.dataset.building` i stedet for `qeInd.style.display !== 'none'` for å avgjøre om egne bygg pågår. Forhindrer at alltid-synlig indikator blokkerer andres-endringer-banneret.
+
+**Umiddelbar oppdatering:** `samtuIncrementPending()` kaller nå `samtuShowPendingIndicator(newCount)` etter å ha oppdatert localStorage. Indikatoren viser byggestatus i det brukeren klikker «Lagre», ikke først ved navigering.
+
+### ✅ Minimering fjernet
+
+Hele minimize-funksjonaliteten er slettet:
+- HTML: `#qe-minimize-pill` og `⊟`-knappen i qe-header fjernet fra `edit-switcher.html`
+- JS: `minimizeQeDialog()`, `qeMinimizeTimer`, `qeMinimizeSaveTime` slettet fra `custom-footer.html`
+- Cancel-knapp i qe-dialog: heter «Lukk dette vinduet» / «Close this window» etter lagring (var «Minimer»), og lukker direkte via `closeQeDialog`
+- `onBuildDone()`: pill-visible-grenen fjernet – kun to grener igjen (dialog åpen / dialog lukket)
+
+**Begrunnelse:** Pillen forsvant ved navigering til en ny side og ga bare dobbel statusinformasjon.
+
+### ✅ ETag-poll-timeout økt
+
+`if (++attempts > 90)` → `if (++attempts > 180)` (1 sek intervall → maks 3 minutter).
+
+**Rotårsak for falsk «Build job failed»:** Et bygg tok ~1m56s. Timeouten på 90 sek utløste `samtuPlayFailure()` mens bygget fortsatt kjørte og faktisk fullførte korrekt.
+
+### Nøkkelpunkter for fremtidige sesjoner
+
+- `data-building`-attributtet er den kanoniske måten å sjekke om qe-bygg pågår (ikke `display`)
+- `samtuIncrementPending()` oppdaterer nå indikatoren umiddelbart – ingen treg respons
+- Jobbhistorikk-dialog (`#job-history-dialog`) åpnes ved klikk på indikatoren, henter siste 15 bygg fra GitHub Actions API filtrert på `actor=<login>`

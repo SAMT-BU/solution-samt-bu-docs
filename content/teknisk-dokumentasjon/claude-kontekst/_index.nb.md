@@ -1771,3 +1771,45 @@ Hele minimize-funksjonaliteten er slettet:
 - `data-building`-attributtet er den kanoniske måten å sjekke om qe-bygg pågår (ikke `display`)
 - `samtuIncrementPending()` oppdaterer nå indikatoren umiddelbart – ingen treg respons
 - Jobbhistorikk-dialog (`#job-history-dialog`) åpnes ved klikk på indikatoren, henter siste 15 bygg fra GitHub Actions API filtrert på `actor=<login>`
+
+---
+
+## Endringslogg – 2026-03-17 (sesjon 6)
+
+### ✅ Jobbhistorikk: sekundtelling, køstatus og avløst-håndtering
+
+**Bakgrunn:** Ved 3+ raske lagringer kansellerer GitHub Pages automatisk eldre jobber i kø («Canceling since a higher priority waiting request for pages exists»). Kansellerte jobber vistes som rød `!` og pending-teller hengte. GitHub Actions bruker dessuten statuser `waiting`/`pending`/`requested` i tillegg til `queued` – alle falt tidligere gjennom til rødt feil-ikon.
+
+**Implementert i `custom-footer.html`:**
+
+| Endring | Detalj |
+|---------|--------|
+| `statusIcon()` | `in_progress` → spinner, `queued`/`waiting`/`pending`/`requested` → grå klokke, `cancelled` → grå `fa-check-circle`, `failure` → rød `!` |
+| Tidskolonne | `queued`/`waiting` → «I kø», `in_progress` → «X sek» (elapsed), `cancelled` → «Avløst», ferdig → `timeAgo` |
+| `checkCompletions()` | Teller `myCancelled` separat. Trigger ferdig-sekvens når `myCompleted > 0 && totalActive === 0` – rydder hele pending-state, ingen heng |
+| `startGhPoll()` | `conclusion === 'cancelled'` → kall `onStatus('Avløst – venter på nytt bygg…')`, ikke `onError` |
+| Live elapsed | `loadHistory` splittet i `fetchHistory()` + `renderHistory(runs)`. Re-render hvert sek fra cache, re-fetch hvert 15. sek mens dialog er åpen |
+| `openHistory()` / `closeHistory()` | Rydder alle timere ved lukking (✕-knapp, klikk utenfor, ESC) |
+
+**Brukerveiledning oppdatert** (`content/om/hvordan-bidra/_index.nb.md`):
+- Ny seksjon «Statusindikator og jobbhistorikk» med tabell over indikator-tilstander
+- Forklaring av GitHub-køoppførsel og avløste jobber for ikke-tekniske redaktører
+
+**Veikart oppdatert** (`veikart/statusrapportering-gui/`): Steg 3 lagt til og markert fullført.
+
+### Lært: GitHub Actions-køstatuser
+
+GitHub Actions returnerer disse statusene for workflow runs (ikke bare `queued` og `in_progress`):
+
+| Status | Når |
+|--------|-----|
+| `queued` | Jobb er i kø, venter på runner |
+| `waiting` | Jobb venter på concurrency-gruppen (Pages-miljøet) |
+| `pending` | Jobb venter på manuell godkjenning eller ressurs |
+| `requested` | Jobb er forespurt men ikke startet |
+| `in_progress` | Jobb kjører |
+| `completed` | Jobb er ferdig (se `conclusion` for utfall) |
+
+**Conclusions:** `success`, `failure`, `cancelled`, `timed_out`, `skipped`, `action_required`
+
+`cancelled` med meldingen «Canceling since a higher priority waiting request for pages exists» betyr at GitHub Pages-miljøet kansellerte en eldre jobb til fordel for nyere. Alle git-commits er bevart – den nyeste jobben deployer alle endringer.

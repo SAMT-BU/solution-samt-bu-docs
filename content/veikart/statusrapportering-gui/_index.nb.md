@@ -62,6 +62,42 @@ Minimize-funksjonaliteten (`qe-minimize-pill`, `minimizeQeDialog()`, `⊟`-knapp
 
 ---
 
+## Steg 3 – Sekundtelling, køstatus og avløst-håndtering ✅ FULLFØRT (2026-03-17, sesjon 6)
+
+### 3a – Sekundtelling for kjørende jobber ✅
+
+Kjørende jobb (`status: in_progress`) viser nå antall sekunder siden start (f.eks. «47 sek»). Oppdateres live hvert sekund via en re-render-timer i historikk-dialogen (ingen ny API-fetch – beregnes fra `run.created_at`).
+
+### 3b – «I kø»-status for ventende jobber ✅
+
+Jobber i kø (`status: queued`, `waiting`, `pending`, `requested`) viser nå:
+- Klokkeikon (grå `fa-clock-o`) i stedet for spinner
+- Teksten «I kø» i stedet for «kjører…» eller et tidsstempel
+
+GitHub Pages-miljøet bruker `waiting` i tillegg til `queued` for jobber som venter på concurrency-gruppen. Begge (og `pending`/`requested`) behandles nå likt.
+
+### 3c – Avløst-håndtering ✅
+
+**Bakgrunn:** GitHub Pages kansellerer automatisk eldre jobber i kø når en nyere jobb med høyere prioritet venter («Canceling since a higher priority waiting request for pages exists»). Skjer ved 3+ raske lagringer.
+
+**Implementert:**
+- `conclusion: cancelled` → grå `fa-check-circle` (ikke rød `fa-exclamation-circle`) + teksten «Avløst»
+- `checkCompletions()`: teller kansellerte som resolved, rydder hele pending-state når minst én suksess finnes og ingen aktive gjenstår – pending-teller henger aldri lenger
+- `startGhPoll()`: kansellert run trigger ikke wah-wah + feilmelding, men holder polling og venter på nytt bygg
+- Brukerveiledningen (om/hvordan-bidra/) oppdatert med forklaring på avløste jobber og køoppførsel
+
+### 3d – Live-oppdatering av jobbhistorikk-dialog ✅
+
+`loadHistory()` splittet i `fetchHistory()` + `renderHistory(runs)`:
+- `renderHistory` re-rendres hvert sekund fra cache (live elapsed-teller uten API-kall)
+- `fetchHistory` re-hentes automatisk hvert 15. sek mens dialogen er åpen
+- `openHistory()` / `closeHistory()` rydder timere korrekt ved åpne/lukke, ESC og klikk utenfor
+
+**Filer endret (sesjon 6):**
+- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html`
+
+---
+
 ## Steg 2 (opprinnelig) – Rikere statusinformasjon ⚠ RULLET TILBAKE (2026-03-17, sesjon 4)
 
 *(Historisk referanse – konsepter kan gjenbrukes)*

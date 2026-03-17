@@ -1813,3 +1813,50 @@ GitHub Actions returnerer disse statusene for workflow runs (ikke bare `queued` 
 **Conclusions:** `success`, `failure`, `cancelled`, `timed_out`, `skipped`, `action_required`
 
 `cancelled` med meldingen «Canceling since a higher priority waiting request for pages exists» betyr at GitHub Pages-miljøet kansellerte en eldre jobb til fordel for nyere. Alle git-commits er bevart – den nyeste jobben deployer alle endringer.
+
+---
+
+## Endringslogg – 2026-03-17 (sesjon 7)
+
+### «Mine»/«Alle»-faner i byggehistorikk-dialog
+
+Undertabs i `#job-history-dialog` lar brukeren veksle mellom egne og alle bygg:
+
+- **«Mine»** (standard): filtrerer på innlogget bruker via `&actor=<login>` i GitHub Actions API
+- **«Alle»**: henter siste 15 bygg i repoet uten actor-filter, viser actor som sublinje per rad
+- **Navnecache:** `GET /users/{login}` hentes én gang per unik login per sidebesøk, caches i JS-dict. Viser `login (Full Name)` – krever at GitHub-profilen har Name-feltet satt (`data.name !== null`)
+- **Tab-bytte:** nullstiller runs-cache og re-fetcher umiddelbart
+
+**Filer endret:** `edit-switcher.html` (HTML for tabs), `custom-footer.html` (JS)
+
+### GitHub-redigeringslenke – riktig repo for modulinnhold
+
+`footer.html`s «Rediger denne siden i GitHub»-lenke hadde ikke fått oppdatert rutinglogikk etter at `edit-switcher.html` fikk fire grener. Lenken brukte alltid `samt-bu-docs`-repoet, selv for modulinnhold (team-architecture, samt-bu-drafts, solution-samt-bu-docs).
+
+**Fix:** Lagt til tilsvarende `hasPrefix`-sjekker i `footer.html` (linje ~51) som i `edit-switcher.html`. Kritisk: **ved ny modul må begge filer oppdateres**.
+
+---
+
+## Endringslogg – 2026-03-17 (sesjon 9)
+
+### Felles pending-indikator for ny side og sletting
+
+**Problem:** `#np-job-indicator` og `#del-job-indicator` var egne statiske `position:fixed; bottom:0; left:0`-elementer som viste «Oppdateringsjobb pågår». De overlappet med `#qe-job-indicator`, brukte ikke `samtuIncrementPending()`, og statusen forsvant ved navigering (ikke i localStorage).
+
+**Fix:**
+- `np-dialog` etter vellykket commit: erstatter `showNpJobIndicator()` med `samtuIncrementPending()`
+- `npPollBuild onDone/onError`: erstatter `hideNpJobIndicator()` + `samtuClearPending()` med `samtuDecrementPending()`
+- `del-dialog` etter vellykket commit: erstatter `showJobIndicator()` med `samtuIncrementPending()`, legger til `samtuUnlockAudio()` i confirm-handler
+- `pollBuild onDone`: erstatter `hideJobIndicator()` med `samtuDecrementPending()` + `samtuPlaySuccess()`
+- bgTimer-vakt forenklet: sjekker kun `qeInd.dataset.building` (ikke lenger npInd/delInd)
+- `#np-job-indicator` og `#del-job-indicator` fjernet fra `edit-switcher.html`
+
+Alle tre flows (redigering, ny side, sletting) bruker nå konsekvent `samtuIncrementPending()` / `samtuDecrementPending()` → delt `#qe-job-indicator` viser «1 endring bygges…» / «N endringer bygges…» for alle operasjoner.
+
+### «Not a fast forward» ved ny side/sletting
+
+**Rotårsak:** `createFilesInOneCommit()` og `deleteFilesInOneCommit()` hentet `GET /git/ref/heads/main` uten `cache: 'no-store'`. GitHub cacher dette kallet i nettleseren i ~60 sekunder → foreldet SHA → «Update is not a fast forward» ved commit like etter en annen commit.
+
+**Fix:** `cache: 'no-store'` lagt til på ref-fetchet i begge funksjoner (linje ~842 og ~1048 i `custom-footer.html`). `createQeCommit` hadde dette riktig fra sesjon 4.
+
+**Lært mønster:** Alle `GET /git/ref/heads/main`-kall i `custom-footer.html` MÅ ha `cache: 'no-store'`. Retry-logikk løser ikke dette problemet siden selve ref-fetchet i retry-loopen også caches.

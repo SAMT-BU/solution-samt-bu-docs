@@ -1860,3 +1860,112 @@ Alle tre flows (redigering, ny side, sletting) bruker nå konsekvent `samtuIncre
 **Fix:** `cache: 'no-store'` lagt til på ref-fetchet i begge funksjoner (linje ~842 og ~1048 i `custom-footer.html`). `createQeCommit` hadde dette riktig fra sesjon 4.
 
 **Lært mønster:** Alle `GET /git/ref/heads/main`-kall i `custom-footer.html` MÅ ha `cache: 'no-store'`. Retry-logikk løser ikke dette problemet siden selve ref-fetchet i retry-loopen også caches.
+
+---
+
+## Endringslogg – 2026-03-18 (sesjon 10)
+
+### ✅ Byggehistorikk: «Oppdatert» → «Endre side»
+
+Commit-meldingsformat i begge koderetninger endret for konsistens med «Ny side» og «Slett side»:
+
+- `createQeCommit()` (~linje 1416): `(qeLang === 'en' ? 'Edit page: ' : 'Endre side: ') + qePageTitle`
+- `renderHistory()`: `msg.replace(/^Oppdatert: /, 'Endre side: ').replace(/^Updated: /, 'Edit page: ')` – fikser også eldre historikkoppføringer i dialogen
+
+**Filer endret:** `custom-footer.html`
+
+---
+
+### ✅ «Slett denne siden»: rekursiv sletting med advarsel
+
+**Problem:** «Slett denne siden» slettet kun `_index.nb.md` + `_index.en.md`. Sider med undermapper ble ikke fullt slettet, og brukeren fikk ingen advarsel.
+
+#### Ny `deleteDirectoryRecursive(token, repo, dirPath, commitMsg)`
+
+Bruker GitHub Trees API for å slette hele mapper i én commit:
+1. `GET /git/ref/heads/main` → head SHA
+2. `GET /git/commits/{sha}` → tree SHA
+3. `GET /git/trees/{treeSha}?recursive=1` → alle filer
+4. Filtrer: `items.filter(i => i.type === 'blob' && i.path.startsWith(dirPath + '/'))`
+5. `POST /git/trees` med `sha: null` per fil → ny tree SHA
+6. `POST /git/commits` → ny commit SHA
+7. `PATCH /git/refs/heads/main` → oppdater ref
+
+Alle GitHub Trees API-kall har `cache: 'no-store'`.
+
+#### To-stegs bekreftelsesdialog
+
+`openDeleteDialog(repo, dirPath, lang, title, afterDeleteUrl, childCount)` – ny parameter `childCount`:
+
+- **`childCount === 0`:** Enkel bekreftelse i `#del-confirm-section`. Rød knapp «Slett denne siden». `doCommit()` kaller `deleteFilesInOneCommit` (kun de to språkfilene).
+- **`childCount > 0`:** Gul advarselsboks vises med antall underkapitler. Knapp: «Vis bekreftelse». Klikk → `showStep2()` → viser `#del-confirm-section-2` med rød boks:
+  - Tittel: «Er du helt sikker?»
+  - Tekst: «Du er i ferd med å slette «{tittel}» og alle {N} underkapitler. Dette kan ikke angres via nettstedet (men kan gjenopprettes fra GitHub-commit-historikken av en administrator). Det er ikke sjekket om andre sider lenker til noen av sidene som slettes — slike lenker kan bli brutte.»
+  - Knapper: «Tilbake» (tilbake til steg 1) og «Ja, slett alt permanent» (kaller `doCommit()`)
+  - `doCommit()` bruker `deleteDirectoryRecursive` for sider med barn
+
+#### `showBuildPanel()` – bug-fix
+
+Skjuler nå begge bekreftelseseksjoner:
+```javascript
+document.getElementById('del-confirm-section').style.display = 'none';
+document.getElementById('del-confirm-section-2').style.display = 'none'; // Ny linje
+document.getElementById('del-build-section').style.display = 'block';
+```
+Problemet: Etter steg-2-bekreftelse ble steg-2-innholdet hengende synlig under bygg-panelet.
+
+#### HTML-teknikk: title via data-attributt
+
+`{{ .Title | jsonify }}` og `{{ .Title | js }}` inne i `onclick="..."` HTML-attributt gir begge problemer:
+- `jsonify` produserer `"tittel"` med omsluttende quotes → HTML-attributten terminerer for tidlig
+- `js` produserer `{0xc000814300...}` (intern Go-peker) i dette konteksten
+
+**Løsning:** `data-del-title="{{ .Title }}"` + `this.dataset.delTitle` i onclick.
+
+#### Fontarv i dialogen (px ikke rem)
+
+Alle `font-size`-verdier i `#del-dialog` endret fra `rem` til `px` fordi `1rem` arver fra HTML-rotelementet (~10px i dette temaet), ikke fra dialogens `font-size:16px`. Alle barn bruker `16px`/`17px` eksplisitt.
+
+**Filer endret:** `edit-switcher.html`, `custom-footer.html`
+
+---
+
+### ✅ `last_editor` – konsistent visning `login (Navn)`
+
+**Problem:** Ulike steder viste `last_editor` ulikt: «erikhag1git (ukjent navn)», «erikhag1git», «Erik Hagen» (bare git-navn). Byggehistorikk «Alle»-fane viste riktig «erikhag1git (Erik Hagen)» – dette er fasiten.
+
+#### Fix 1 – skrivesiden (`custom-footer.html` linje ~1515)
+
+```javascript
+// Gammel (skrev «(ukjent navn)» ved manglende navn):
+var editorValue = editorLogin ? editorLogin + ' (' + (editorName || 'ukjent navn') + ')' : null;
+
+// Ny:
+var editorValue = editorLogin
+  ? (editorName ? editorLogin + ' (' + editorName + ')' : editorLogin)
+  : null;
+```
+Skriver nå `erikhag1git (Erik Hagen)` om navn finnes, ellers bare `erikhag1git`.
+
+#### Fix 2 – visningssiden (`header.html`)
+
+**Steg A – strip gammel `(ukjent navn)` fra lagrede verdier:**
+```hugo
+{{ $editor = $editor | replaceRE ` \(ukjent navn\)` "" }}
+```
+
+**Steg B – supplement bare-login med GitInfo-navn:**
+```hugo
+{{ if and $editor (not (strings.Contains $editor "(")) }}
+  {{ with .GitInfo }}
+    {{ if not (strings.Contains .AuthorName "[bot]") }}
+      {{ $editor = printf "%s (%s)" $editor .AuthorName }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+```
+Hvis `last_editor` er bare en login (ingen parentes), hentes visningsnavnet fra git-commit-historikken → gir `erikhag1git (Erik Hagen)` uten å re-lagre filene.
+
+**Fallback (ingen `last_editor` i frontmatter):** Viser bare `.GitInfo.AuthorName` = `Erik Hagen`. Eks: sider commitet direkte via git uten nettstedseditor. Loginen er ikke tilgjengelig fra git-historikk alene.
+
+**Filer endret:** `custom-footer.html`, `header.html`

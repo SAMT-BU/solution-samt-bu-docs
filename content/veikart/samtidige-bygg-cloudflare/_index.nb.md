@@ -1,5 +1,5 @@
 ---
-id: 9d68d1e1-27b6-4adb-a587-642523da4c3f
+id: 2771675f-119a-4525-9fe4-c26598eb9a08
 title: "Realisering av samtidige bygg gjennom Cloudflare Pages"
 linkTitle: "Samtidige bygg via Cloudflare"
 weight: 92

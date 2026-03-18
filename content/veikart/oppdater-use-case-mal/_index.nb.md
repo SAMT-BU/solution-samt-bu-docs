@@ -3,7 +3,7 @@ id: 2d7db09a-fd0c-4e8e-8316-2a0870840f8e
 title: "Oppdater use case-mal med «Innspill til løsningsvalg»"
 linkTitle: "Oppdater use case-mal"
 weight: 50
-status: "Tidlig utkast"
+status: "Avbrutt"
 last_editor: erikhag1git (Erik Hagen)
 
 ---

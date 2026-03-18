@@ -3,7 +3,7 @@ id: beb8d117-5988-48cc-aa04-41d28201aeb1
 title: "Statusrapportering og GUI for bygg-køer"
 linkTitle: "Statusrapportering og bygg-køer"
 weight: 130
-status: "Pågår"
+status: "Godkjent"
 last_editor: erikhag1git (Erik Hagen)
 
 ---

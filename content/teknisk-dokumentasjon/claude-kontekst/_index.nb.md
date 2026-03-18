@@ -1969,3 +1969,19 @@ Hvis `last_editor` er bare en login (ingen parentes), hentes visningsnavnet fra 
 **Fallback (ingen `last_editor` i frontmatter):** Viser bare `.GitInfo.AuthorName` = `Erik Hagen`. Eks: sider commitet direkte via git uten nettstedseditor. Loginen er ikke tilgjengelig fra git-historikk alene.
 
 **Filer endret:** `custom-footer.html`, `header.html`
+
+#### ⚠ Korrigert samme sesjon: GitInfo.AuthorName ≠ siste innholdsredaktør
+
+**Bug oppdaget:** `2benmoen` redigerte en side via nettstedseditor → `last_editor: 2benmoen`. Siden ble etterpå berørt av UUID-workflow eller annen commit → `.GitInfo.AuthorName` = `Erik Hagen`. Supplementeringen ga `2benmoen (Erik Hagen)` – feil navn på feil bruker.
+
+**Rotårsak:** `.GitInfo.AuthorName` er forfatteren av **siste git-commit på filen**, ikke nødvendigvis den som redigerte innholdet.
+
+**Fix:** Supplement-steget fjernet fra `header.html`. Endelig korrekt logikk:
+1. Hent `last_editor` fra frontmatter → strip `(ukjent navn)` → vis som den er
+2. Fallback kun hvis `last_editor` er tom: vis `.GitInfo.AuthorName`
+
+| Scenario | Vises |
+|----------|-------|
+| `last_editor: 2benmoen` | `2benmoen` |
+| `last_editor: erikhag1git (Erik Hagen)` | `erikhag1git (Erik Hagen)` |
+| Ingen `last_editor`, siste git-committer = Erik Hagen | `Erik Hagen` |

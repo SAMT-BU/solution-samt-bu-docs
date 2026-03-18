@@ -20,6 +20,8 @@ Nettstedet er bygget med Hugo og publisert til GitHub Pages via GitHub Actions. 
 | `samt-bu-docs` | Hoved-repo – konfigurasjon, lokalt innhold, CI/CD | ✅ Ja – direkte push |
 | `samt-bu-drafts` | Hugo-modul – utkast og innspill | ✅ Ja – via `repository_dispatch` |
 | `team-architecture` | Hugo-modul – arkitektur-teamets innhold | ✅ Ja – via `repository_dispatch` |
+| `team-semantics` | Hugo-modul – semantikk-teamets innhold | ⚠ Ikke koblet (ingen trigger-workflow) |
+| `team-pilot-1` | Hugo-modul – pilot 1-teamets innhold | ✅ Ja – via `repository_dispatch` |
 | `solution-samt-bu-docs` | Hugo-modul – teknisk dokumentasjon for SAMT-BU Docs | ✅ Ja – via `repository_dispatch` |
 | `hugo-theme-samt-bu` | Git submodule – tema og layout | Nei – oppdateres manuelt via submodule-peker |
 
@@ -33,7 +35,9 @@ Filen `.github/workflows/hugo.yml` i `samt-bu-docs` gjør følgende ved triggeri
 2. **Sjekker ut** `samt-bu-docs` med full historikk og submoduler
 3. **Sjekker ut modulrepoer** direkte (ikke via Go-modulcache):
    - `SAMT-X/team-architecture` → `.hugo-modules/team-architecture/`
+   - `SAMT-X/team-pilot-1` → `.hugo-modules/team-pilot-1/`
    - `SAMT-X/samt-bu-drafts` → `.hugo-modules/samt-bu-drafts/`
+   - `SAMT-X/solution-samt-bu-docs` → `.hugo-modules/solution-samt-bu-docs/`
 4. **Injiserer `lastmod`** i modulinnhold via `inject-lastmod.py` (Git-historikk → frontmatter)
 5. **Bygger med Hugo** med `HUGO_MODULE_REPLACEMENTS` som peker til lokale kloner
 6. **Deployer** til GitHub Pages
@@ -55,31 +59,64 @@ on:
 
 ## Kryssrepo-triggering (`repository_dispatch`)
 
-Uten denne mekanismen: en redaktør redigerer en side via Decap CMS → commit til `samt-bu-drafts` → ingenting skjer i `samt-bu-docs` → nettsiden oppdateres ikke.
+Uten denne mekanismen: en redaktør lagrer en side → commit til modulrepoet → ingenting skjer i `samt-bu-docs` → nettsiden oppdateres ikke.
 
-**Med mekanismen:** push til `samt-bu-drafts` (eller `team-architecture`) → trigger-workflow sender signal → `samt-bu-docs` starter nybygg automatisk.
+**Med mekanismen:** push til et modulrepo → trigger-workflow sender signal → `samt-bu-docs` starter nybygg automatisk.
 
 ### Slik fungerer det
 
-**Steg 1 – Push til modulrepo** (f.eks. via Decap CMS-redigering):
+**Steg 1 – Push til modulrepo** (f.eks. via innebygd editor):
 
 ```
-Redaktør lagrer i CMS
-  → Decap committer til samt-bu-drafts/main
-  → ensure-uuids.yml kjøres (legger til id-felt)
-  → trigger-docs-rebuild.yml kjøres
+Redaktør lagrer siden
+  → commit til modulrepo/main
+  → ensure-uuids i trigger-docs-rebuild.yml kjøres (sikrer id-felt i frontmatter)
+  → repository_dispatch sendes til samt-bu-docs
 ```
 
-**Steg 2 – `trigger-docs-rebuild.yml`** (i `samt-bu-drafts` og `team-architecture`):
+**Steg 2 – `trigger-docs-rebuild.yml`** (finnes i hvert modulrepo som er koblet):
 
 ```yaml
-- name: Send repository_dispatch til samt-bu-docs
-  run: |
-    curl -X POST \
-      -H "Authorization: token ${{ secrets.DOCS_REBUILD_TOKEN }}" \
-      -H "Accept: application/vnd.github.v3+json" \
-      https://api.github.com/repos/SAMT-X/samt-bu-docs/dispatches \
-      -d '{"event_type":"module-updated","client_payload":{"source":"samt-bu-drafts"}}'
+name: Trigger rebuild av samt-bu-docs
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  trigger:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sikre UUID-er i frontmatter
+        run: |
+          python3 .github/scripts/ensure-uuids.py
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content/
+          if git diff --staged --quiet; then
+            echo "Ingen endringer – alle UUID-er var på plass"
+          else
+            git commit -m "Auto: legg til manglende UUID-er i frontmatter [skip ci]"
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              sleep 3
+            done
+          fi
+
+      - name: Send repository_dispatch til samt-bu-docs
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.DOCS_REBUILD_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/SAMT-X/samt-bu-docs/dispatches \
+            -d '{"event_type":"module-updated","client_payload":{"source":"<repo-navn>"}}'
 ```
 
 **Steg 3 – `hugo.yml`** i `samt-bu-docs` trigges av `repository_dispatch` med type `module-updated` → fullt nybygg og deploy.
@@ -92,6 +129,7 @@ Workflowen bruker et GitHub Personal Access Token (Classic) med **`workflow`-sco
 |------|------------|-------|
 | `samt-bu-drafts` | `DOCS_REBUILD_TOKEN` | PAT med `workflow`-scope |
 | `team-architecture` | `DOCS_REBUILD_TOKEN` | Samme PAT |
+| `team-pilot-1` | `DOCS_REBUILD_TOKEN` | Samme PAT |
 | `solution-samt-bu-docs` | `DOCS_REBUILD_TOKEN` | Samme PAT |
 
 **Administrere tokenet:**
@@ -103,40 +141,27 @@ Workflowen bruker et GitHub Personal Access Token (Classic) med **`workflow`-sco
 
 ## Legge til et nytt modulrepo i pipelinen
 
-Når et nytt Hugo-modulrepo skal kobles til `samt-bu-docs` slik at endringer der automatisk publiseres:
+Se den fullstendige veiledningen: [Opprette nytt modulrepo – steg-for-steg](/samt-bu-docs/loesninger/cms-loesninger/samt-bu-docs/veikart/nytt-modulrepo/).
 
-### 1. I modulrepoet – legg til trigger-workflow
+Kortversjon – hva som må gjøres i `samt-bu-docs` når modulrepoet er klart:
 
-Opprett `.github/workflows/trigger-docs-rebuild.yml`:
+### 1. I `hugo.toml` – registrer modulen
 
-```yaml
-name: Trigger rebuild av samt-bu-docs
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  trigger:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send repository_dispatch til samt-bu-docs
-        run: |
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.DOCS_REBUILD_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/SAMT-X/samt-bu-docs/dispatches \
-            -d '{"event_type":"module-updated","client_payload":{"source":"<repo-navn>"}}'
+```toml
+[[module.imports]]
+  path = "github.com/SAMT-X/<repo-navn>"
+  [[module.imports.mounts]]
+    source = "content"
+    target = "content/<sti-i-nettstedet>/"
 ```
 
-### 2. I modulrepoet – legg til secret
+### 2. Oppdater `go.mod`/`go.sum`
 
 ```bash
-gh secret set DOCS_REBUILD_TOKEN --repo SAMT-X/<repo-navn>
-# Lim inn PAT-verdien når du blir bedt om det
+GONOSUMDB=* GOPROXY=direct hugo mod get github.com/SAMT-X/<repo-navn>@latest
 ```
 
-### 3. I `samt-bu-docs/hugo.yml` – legg til checkout av nytt repo
+### 3. I `hugo.yml` – legg til checkout-steg
 
 ```yaml
 - name: Checkout <repo-navn> module
@@ -147,39 +172,19 @@ gh secret set DOCS_REBUILD_TOKEN --repo SAMT-X/<repo-navn>
     fetch-depth: 0
 ```
 
-### 4. I `samt-bu-docs/hugo.yml` – legg til i `HUGO_MODULE_REPLACEMENTS`
+### 4. I `hugo.yml` – legg til i `HUGO_MODULE_REPLACEMENTS`
+
+Legg til på slutten av den eksisterende listen (husk komma etter forrige linje):
 
 ```yaml
-HUGO_MODULE_REPLACEMENTS: >-
-  github.com/SAMT-X/team-architecture ->
-  ${{ github.workspace }}/.hugo-modules/team-architecture,
-  github.com/SAMT-X/samt-bu-drafts ->
-  ${{ github.workspace }}/.hugo-modules/samt-bu-drafts,
-  github.com/SAMT-X/<repo-navn> ->
-  ${{ github.workspace }}/.hugo-modules/<repo-navn>
+github.com/SAMT-X/<repo-navn> ->
+${{ github.workspace }}/.hugo-modules/<repo-navn>
 ```
 
-### 5. I `inject-lastmod.py` – legg til modulstien (valgfritt)
+### 5. I `inject-lastmod.py` – legg til modulstien
 
-Hvis `Sist endret`-tidsstempler skal fungere for innholdet fra det nye repoet, legg til stien i `inject-lastmod.py`.
-
-### 6. I `hugo.toml` – registrer modulen
-
-```toml
-[[module.imports]]
-  path = "github.com/SAMT-X/<repo-navn>"
-  [[module.imports.mounts]]
-    source = "content"
-    target = "content/<sti-i-nettstedet>/"
-```
-
-### 7. Oppdater `go.mod`/`go.sum`
-
-```bash
-GONOSUMDB=* GOPROXY=direct hugo mod get github.com/SAMT-X/<repo-navn>@latest
-hugo  # Verifiser at det bygger
-git add go.mod go.sum && git commit -m "Legg til <repo-navn> som Hugo-modul"
-git push
+```python
+'.hugo-modules/<repo-navn>',
 ```
 
 ---
@@ -193,7 +198,7 @@ Hugo-moduler leveres som zip-arkiv uten Git-historikk, og `Sist endret`-datoen v
 3. `lastmod: <ISO-tidsstempel>` skrives inn i frontmatter i CI-workspace
 4. Endringen commites **ikke** – kun midlertidig før bygg
 
-Gjelder per nå: `team-architecture` og `samt-bu-drafts`.
+Gjelder per nå: `team-architecture`, `team-pilot-1`, `samt-bu-drafts` og `solution-samt-bu-docs`.
 
 ---
 
@@ -206,7 +211,7 @@ Arkitekturen har en skarp separasjon mellom to uavhengige git-repoer:
 | Hva | Repo | Inneholder |
 |-----|------|------------|
 | **GUI og logikk** | `hugo-theme-samt-bu` (submodule) | `custom-footer.html` (JS), `edit-switcher.html`, `custom-head.html` (CSS) |
-| **Dokumentasjonsinnhold** | `samt-bu-docs`, `team-architecture`, `samt-bu-drafts`, `solution-samt-bu-docs` | Alle `.md`-filer |
+| **Dokumentasjonsinnhold** | `samt-bu-docs`, `team-architecture`, `team-pilot-1`, `samt-bu-drafts`, `solution-samt-bu-docs` | Alle `.md`-filer |
 
 Disse repoene deler ingen git-historikk. En `git revert` i temaet berører aldri innholdsrepoene – og omvendt. Det betyr at feilaktige GUI-endringer kan rulles tilbake på ~2 minutter uten at én linje innhold røres.
 

@@ -2071,4 +2071,60 @@ Nåværende løsning (`cancel-in-progress: false`) er det beste vi kan oppnå me
 
 **Ekte parallelle deploys** ville krevd en plattform uten denne begrensningen (f.eks. Vercel), eller en arkitektur der hver redaktørsesjon deployer til en unik preview-URL som merges inn. Begge er uforholdsmessig komplekse for dette prosjektets skala.
 
-**`samt-bu-docs-git`-prosjektet kan slettes** fra CF-dashbordet – det tjener ingen hensikt og bruker build-kvoten (500 bygg/mnd gratis).
+**`samt-bu-docs-git`-prosjektet er slettet** fra CF-dashbordet (2026-03-19).
+
+---
+
+## Trygg rekonstruksjon – strategi og kandidatliste (2026-03-19)
+
+### Bakgrunn
+
+Etter testing ble GUI-tilstanden fra **2026-03-17 kl. 13:08** identifisert som et godt og stabilt utgangspunkt:
+- Jobbhistorikk med køstatus, sekundtelling og avløst-håndtering fungerer korrekt
+- Byggehistorikk-logikk og sammenslåing av jobber oppfører seg som forventet
+- Ingen CF-spesifikke avhengigheter
+
+**Nåværende tema-tilstand:** `ca0a076` (gjenoppretter `d3657b1` fra 17.03 13:08)
+
+### Ufravikelige premisser for rekonstruksjonen
+
+1. **Aldri igjen forsøke parallelle bygg via Cloudflare** – dette er en stengt dør. CF Pages serialiserer deployments per prosjekt uansett deploy-metode. Se egen analyse lenger opp.
+2. **Innhold (`content/`) skal aldri påvirkes av endringer i systemfunksjonalitet** – GUI-endringer skjer kun i temaet og `.github/`-filer.
+3. **Én funksjon om gangen** – test og verifiser før neste innføres.
+4. **Playwright-tester kjøres før og etter** hver endring der det er relevant.
+
+### Kandidater for rekonstruksjon (i prioritert rekkefølge)
+
+Alle kandidater er hentet fra bygg-oversikten (se `bygg-oversikt-2026-03-19.md` i input_files).
+Commit-referanser er til `hugo-theme-samt-bu` (tema-commits).
+
+| # | Tema-commit | Dato/tid | Beskrivelse | Kompleksitet | Avhengighet |
+|---|-------------|----------|-------------|--------------|-------------|
+| 1 | `58f2442` | 17.03 15:07 | **«Mine»/«Alle»-faner i byggehistorikk-dialog** | Lav | Ingen |
+| 2 | `d803dbd` | 17.03 15:52 | **Fix: «Endre i GitHub»-lenke riktig repo for modulinnhold** | Lav | Ingen |
+| 3 | `1082501` | 17.03 22:06 | **Fix: `cache: no-store` på ref-henting i «Ny side» og «Slett»** | Lav | Ingen |
+| 4 | `f9efd4a` | 17.03 21:55 | **Felles pending-indikator for «Ny side» og «Slett»** | Middels | Ingen |
+| 5 | `21e31d6`+`2f47835`+`18dac02`+`7f6e059` | 17.03 23:32–00:24 | **Slett-dialog: UX-forbedringer** (tittel via data-attributt, px-fonter, tekstpresiseringer, steg-2 skjules) | Middels | Ingen |
+| 6 | (flere) | 17.03 22:50 | **Rekursiv sletting av undermapper med to-stegs bekreftelse** | Høy | Kandidat 5 |
+| 7 | `05e3468`+`2619ff9`+`ff56c61` | 18.03 00:59–01:36 | **`last_editor`: konsistent visning, fiks ukjent navn og GitInfo-fallback** | Lav–middels | Ingen |
+| 8 | `4fa231e` | 18.03 11:07 | **Fix: `createQeCommit` viser riktig feilmelding ved API-feil** | Lav | Ingen |
+| 9 | `ca36bf7`→`b309330` | 18.03 20:09–22:28 | **Font-fikser: DIN→Arial, bold !important, margin-bottom ul** | Lav | Ingen |
+| 10 | – (hugo.yml) | 18.03 22:07 | **CI: retry-løkke for wrangler deploy** | Lav | Ingen (kun hugo.yml) |
+| 11 | – (hugo.yml) | 19.03 05:56 | **CI: `cancel-in-progress: false`** | Lav | Ingen (kun hugo.yml) |
+
+**Bevisst utelatt (CF-avhengige, ikke aktuelle):**
+- `9e7721c`–`67567db`: Alt relatert til CF Pages ETag-polling, SHA-basert deteksjon, `waitForCfCheckRun` og CF-spesifikke byggehistorikk-tilstander.
+
+**Mulig å gjeninnføre i fremtiden (CF-agnostiske, men revertert i hastverk):**
+- Byggehistorikk: tidsstempel til venstre + `1m56s`-format (tema-commits `2c68a55`, `ef591ea`) – disse er uavhengige av CF-metode og ble revertert kun fordi de ble utviklet i samme økt som CF-eksperimentene.
+- Adaptivt poll-intervall (3s/15s) – `d58a7c6` – likedan.
+
+### Anbefalt fremgangsmåte
+
+For hver kandidat:
+1. Les opp tema-commit(s) med `git show <hash>` for å forstå eksakt hva som endres
+2. Gjør endringen manuelt (ikke `git cherry-pick` – for å unngå å dra med seg uønskede kontekstlinjer)
+3. Bygg lokalt med `hugo server` og verifiser
+4. Kjør Playwright-test om relevant
+5. Commit i temaet → push → oppdater submodule-peker i `samt-bu-docs` → push
+6. Observer bygg og oppførsel på `samt-bu-docs.pages.dev`

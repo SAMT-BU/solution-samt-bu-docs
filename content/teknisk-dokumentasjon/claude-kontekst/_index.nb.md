@@ -2033,3 +2033,42 @@ Forsøkte å bytte fra wrangler til CF Pages native Git-integrasjon. Endte med f
 - `samt-bu-docs`: `85a085d` (cancel-in-progress: false)
 
 **Filer endret:** `.github/workflows/hugo.yml`, `themes/hugo-theme-samt-bu` (submodule-peker)
+
+---
+
+## Analyse: Parallelle bygg på Cloudflare Pages – hypotese, test og konklusjon
+
+### Bakgrunn og hypotese
+
+Nettstedsredaktøren lar brukere lagre endringer direkte fra nettleseren. Hvert lagre-klikk trigger en GitHub-commit → GitHub Actions-bygg → wrangler deploy. Ved rask redigering (f.eks. tre sider på 30 sekunder) oppstår spørsmålet: kan CF Pages kjøre disse deploys parallelt, slik at alle tre er synlige på nettstedet raskt?
+
+**Hypotesen** var at CF Pages sin native Git-integrasjon – med annonserte «6 concurrent build slots» på betalte planer – kanskje ville tillate ekte parallelle deployments til samme prosjekt/branch, i motsetning til wrangler (Direct Upload) der hvert deploy er en sekvensiell opplasting.
+
+**Motivasjon for å undersøke dette:** GUI-en viser en pending-indikator og byggehistorikk. Hvis bygg kjøres parallelt, kan alle tre ferdigstilles omtrent samtidig og nettstedet oppdateres raskt. Med sekvensiell behandling må brukeren vente på at bygg 1 → 2 → 3 kjøres i tur.
+
+### Hva vi testet (sesjon 15, 2026-03-18/19)
+
+1. **CF Pages Direct Upload (wrangler)** – eksisterende oppsett. Bygg skjer i GitHub Actions, output lastes opp via `npx wrangler pages deploy`. `cancel-in-progress: true` avbrøt eldre bygg ved ny push.
+
+2. **CF Pages Git-integrasjon** – opprettet nytt CF Pages-prosjekt `samt-bu-docs-git` koblet direkte til `SAMT-X/samt-bu-docs`-repoet på GitHub. CF Pages bygger da selv (Hugo) på sine egne servere ved push til `main`, uten GitHub Actions. Byttet `hugo.yml` til kun å kjøre UUID-sjekk + trigge CF via deploy hook.
+
+3. **Observerte byggetider** med Git-integrasjon ved multiple raske pusher: tidsstemplene i byggehistorikken viste tydelig at hvert bygg ventet på at forrige var ferdig før det startet.
+
+### Hva vi observerte
+
+| Observasjon | Implikasjon |
+|-------------|-------------|
+| CF Pages Git-integrasjon køer bygg sekvensielt per prosjekt/branch – bekreftet fra tidsmålinger i sesjon 15 | «6 concurrent build slots» gjelder _ulike_ prosjekter eller branches parallelt, ikke multiple pusher til _samme_ branch |
+| `samt-bu-docs-git.pages.dev` og `samt-bu-docs.pages.dev` viser alltid identisk innhold etter bygg | Begge peker på `main`-branchen – de er to uavhengige visninger av samme kodebase |
+| Wrangler deploy (Direct Upload) serialiserer også på CF sin side | CF Pages tillater uansett kun én aktiv deployment per prosjekt om gangen, uavhengig av deploy-metode |
+| SHA-basert polling via GitHub Checks API (`waitForCfCheckRun`) fungerte med Git-integrasjon | Wrangler lager ingen GitHub check-runs → polling timeouter. Krever altså Git-integrasjon for å brukes |
+
+### Konklusjon
+
+**CF Pages støtter ikke ekte parallelle deployments til samme prosjekt/branch**, verken via wrangler eller native Git-integrasjon. «6 concurrent build slots» refererer til kapasitet på tvers av prosjekter, ikke innad i ett prosjekt.
+
+Nåværende løsning (`cancel-in-progress: false`) er det beste vi kan oppnå med CF Pages: alle bygg kjøres i kø og fullføres i rekkefølge. Siste endring vinner til slutt. Eneste kjente bieffekt er at GUI-en ikke viser jobb nr. 3 i byggehistorikken før de to første er ferdige.
+
+**Ekte parallelle deploys** ville krevd en plattform uten denne begrensningen (f.eks. Vercel), eller en arkitektur der hver redaktørsesjon deployer til en unik preview-URL som merges inn. Begge er uforholdsmessig komplekse for dette prosjektets skala.
+
+**`samt-bu-docs-git`-prosjektet kan slettes** fra CF-dashbordet – det tjener ingen hensikt og bruker build-kvoten (500 bygg/mnd gratis).

@@ -2075,56 +2075,79 @@ Nåværende løsning (`cancel-in-progress: false`) er det beste vi kan oppnå me
 
 ---
 
-## Trygg rekonstruksjon – strategi og kandidatliste (2026-03-19)
+## Trygg rekonstruksjon – strategi og kandidatliste (oppdatert 2026-03-20)
 
 ### Bakgrunn
 
-Etter testing ble GUI-tilstanden fra **2026-03-17 kl. 13:08** identifisert som et godt og stabilt utgangspunkt:
-- Jobbhistorikk med køstatus, sekundtelling og avløst-håndtering fungerer korrekt
-- Byggehistorikk-logikk og sammenslåing av jobber oppfører seg som forventet
-- Ingen CF-spesifikke avhengigheter
+Original baseline: `ca0a076` = `d3657b1` (17.03 13:08) – stabil tilstand med jobbhistorikk, køstatus og avløst-håndtering, ingen CF-avhengigheter.
 
-**Nåværende tema-tilstand:** `ca0a076` (gjenoppretter `d3657b1` fra 17.03 13:08)
+**Nåværende tema-baseline etter sesjon 18:** `916251e` (20.03, natt)
 
-### Ufravikelige premisser for rekonstruksjonen
+Sesjon 18 innførte følgende på toppen av baseline (alle testet og bekreftet ok):
 
-1. **Aldri igjen forsøke parallelle bygg via Cloudflare** – dette er en stengt dør. CF Pages serialiserer deployments per prosjekt uansett deploy-metode. Se egen analyse lenger opp.
-2. **Innhold (`content/`) skal aldri påvirkes av endringer i systemfunksjonalitet** – GUI-endringer skjer kun i temaet og `.github/`-filer.
-3. **Én funksjon om gangen** – test og verifiser før neste innføres.
-4. **Playwright-tester kjøres før og etter** hver endring der det er relevant.
+| Ny tema-commit | Beskrivelse |
+|----------------|-------------|
+| `74ac24b` | Mine/Alle-faner + tidsstempel i byggehistorikk (fra `58f2442` + `2c68a55`) |
+| `191fd92` | Byggetid fra API (`updated_at − created_at`), fjernet localStorage-løsning |
+| `0a5d052` | Sekundteller også i kø-fasen (ingen «I kø»-tekst) |
+| `491770a` | `cache: no-store` på ref-henting i createFilesInOneCommit + deleteFilesInOneCommit |
+| `ee813df` | Felles pending-indikator for ny side og sletting (kandidat #4) |
+| `916251e` | Startsignal (samtuPlayStart) ved oppstart av slettepolling |
 
-### Kandidater for rekonstruksjon (i prioritert rekkefølge)
+### Ufravikelige premisser
 
-Alle kandidater er hentet fra bygg-oversikten (se `bygg-oversikt-2026-03-19.md` i input_files).
-Commit-referanser er til `hugo-theme-samt-bu` (tema-commits).
+1. **Aldri igjen forsøke parallelle bygg via Cloudflare** – stengt dør.
+2. **Innhold (`content/`) påvirkes aldri av GUI-endringer** – kun tema og `.github/`.
+3. **Én funksjon om gangen** – test og verifiser før neste.
+4. **Alltid manuelt (ikke cherry-pick)** – unngår uønskede kontekstlinjer.
+
+### Gjenstående kandidater (i prioritert rekkefølge)
 
 | # | Tema-commit | Dato/tid | Beskrivelse | Kompleksitet | Avhengighet |
 |---|-------------|----------|-------------|--------------|-------------|
-| 1 | `58f2442` | 17.03 15:07 | **«Mine»/«Alle»-faner i byggehistorikk-dialog** | Lav | Ingen |
 | 2 | `d803dbd` | 17.03 15:52 | **Fix: «Endre i GitHub»-lenke riktig repo for modulinnhold** | Lav | Ingen |
-| 3 | `1082501` | 17.03 22:06 | **Fix: `cache: no-store` på ref-henting i «Ny side» og «Slett»** | Lav | Ingen |
-| 4 | `f9efd4a` | 17.03 21:55 | **Felles pending-indikator for «Ny side» og «Slett»** | Middels | Ingen |
 | 5 | `21e31d6`+`2f47835`+`18dac02`+`7f6e059` | 17.03 23:32–00:24 | **Slett-dialog: UX-forbedringer** (tittel via data-attributt, px-fonter, tekstpresiseringer, steg-2 skjules) | Middels | Ingen |
 | 6 | (flere) | 17.03 22:50 | **Rekursiv sletting av undermapper med to-stegs bekreftelse** | Høy | Kandidat 5 |
 | 7 | `05e3468`+`2619ff9`+`ff56c61` | 18.03 00:59–01:36 | **`last_editor`: konsistent visning, fiks ukjent navn og GitInfo-fallback** | Lav–middels | Ingen |
 | 8 | `4fa231e` | 18.03 11:07 | **Fix: `createQeCommit` viser riktig feilmelding ved API-feil** | Lav | Ingen |
 | 9 | `ca36bf7`→`b309330` | 18.03 20:09–22:28 | **Font-fikser: DIN→Arial, bold !important, margin-bottom ul** | Lav | Ingen |
 | 10 | – (hugo.yml) | 18.03 22:07 | **CI: retry-løkke for wrangler deploy** | Lav | Ingen (kun hugo.yml) |
-| 11 | – (hugo.yml) | 19.03 05:56 | **CI: `cancel-in-progress: false`** | Lav | Ingen (kun hugo.yml) |
 
 **Bevisst utelatt (CF-avhengige, ikke aktuelle):**
-- `9e7721c`–`67567db`: Alt relatert til CF Pages ETag-polling, SHA-basert deteksjon, `waitForCfCheckRun` og CF-spesifikke byggehistorikk-tilstander.
+- `9e7721c`–`67567db`: CF Pages ETag-polling, SHA-basert deteksjon, `waitForCfCheckRun`.
 
-**Mulig å gjeninnføre i fremtiden (CF-agnostiske, men revertert i hastverk):**
-- Byggehistorikk: tidsstempel til venstre + `1m56s`-format (tema-commits `2c68a55`, `ef591ea`) – disse er uavhengige av CF-metode og ble revertert kun fordi de ble utviklet i samme økt som CF-eksperimentene.
-- Adaptivt poll-intervall (3s/15s) – `d58a7c6` – likedan.
+**Adaptivt poll-intervall** – `d58a7c6` – CF-agnostisk, kan vurderes senere.
 
-### Anbefalt fremgangsmåte
+### Fremgangsmåte
 
 For hver kandidat:
-1. Les opp tema-commit(s) med `git show <hash>` for å forstå eksakt hva som endres
-2. Gjør endringen manuelt (ikke `git cherry-pick` – for å unngå å dra med seg uønskede kontekstlinjer)
+1. `git show <hash>` – forstå eksakt hva som endres
+2. Gjør endringen manuelt i nåværende fil
 3. Bygg lokalt med `hugo server` og verifiser
-4. Kjør Playwright-test om relevant
-5. Commit i temaet → push → oppdater submodule-peker i `samt-bu-docs` → push
-6. Observer bygg og oppførsel på `samt-bu-docs.pages.dev`
+4. Commit i temaet → push → oppdater submodule-peker i `samt-bu-docs` → push
+5. Observer bygg og oppførsel på `samt-bu-docs.pages.dev`
+
+---
+
+## Endringslogg – 2026-03-20 (sesjon 18)
+
+### Byggehistorikk GUI – rekonstruksjon og forbedringer
+
+Startet fra baseline `ca0a076` (`d3657b1`, 17.03 13:08). Alle endringer er manuelt innarbeidet og testet.
+
+**Innarbeidet fra rekonstruksjonslisten:**
+- **Kandidat #1** (`58f2442`): Mine/Alle-faner i byggehistorikk
+- **Kandidat #3** (`1082501`): `cache: no-store` på ref-henting i createFilesInOneCommit og deleteFilesInOneCommit
+- **Kandidat #4** (`f9efd4a`): Felles pending-indikator for ny side og sletting
+
+**Nye forbedringer (ikke i original kandidatliste):**
+- Byggetid fra API (`updated_at − created_at`) erstatter localStorage-løsning (`samtuStoreBuildTime`/`samtuLookupBuildTime` fjernet). Gir korrekt varighet for alle bygg uavhengig av om de ble fulgt i nettleseren.
+- Tidsstempel (yy-mm-dd / hh:mm:ss) per rad i byggehistorikk – kombinert med kandidat #1.
+- Sekundteller vises også i kø-fasen (`queued`/`waiting`/`pending`/`requested` behandles likt `in_progress`). Ikonet (⏰ vs spinner) skiller visuelt.
+- Startsignal (`samtuPlayStart`) manglet i sletteflytens `pollBuild` – lagt til.
+
+**Læring – `cache: no-store`:**
+Feilen «Update is not a fast forward» oppstår fordi nettleseren cacher `GET /git/ref/heads/main` i 60 sek. Retry-løkken henter da samme foreldede SHA og feiler på nytt. `createQeCommit` hadde allerede `cache: no-store`; de to andre manglet det. Alltid sjekk alle tre ved fremtidige endringer i commit-flyten.
+
+**Læring – localStorage for byggetid:**
+Å lagre byggetid i localStorage er unødvendig – GitHub API gir `created_at` og `updated_at` på hvert run. `updated_at − created_at` ≈ byggetid, alltid tilgjengelig, null lokalt state.

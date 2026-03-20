@@ -331,6 +331,26 @@ Bekreftet fungerende mønster for å lenke til Word-filer i `samt-bu-files`:
 
 ---
 
+## Oversettelse NB→EN – siste fullstendige gjennomgang
+
+**Dato:** 2026-03-21 (sesjon 20)
+
+Alle repoer har 100 % EN-dekning fra og med denne datoen. Ved fremtidige sesjoner er det tilstrekkelig å sjekke kun filer endret *etter* 2026-03-21:
+
+```bash
+git log --since="2026-03-21" --name-only --pretty=format: -- "*.nb.md" | sort -u | grep -v '^$'
+```
+
+Kjøres i hvert repo (`samt-bu-docs`, `solution-samt-bu-docs`, `team-architecture`, `team-semantics`, `samt-bu-drafts`). Tilsvarende EN-fil for hvert treff sjekkes og oppdateres.
+
+**Hva ble gjort i gjennomgangen:**
+- 12 nye EN-filer: `solution-samt-bu-docs/veikart/` (alle manglende)
+- 3 nye EN-filer: `team-architecture/` (KS-Pål, Pilot-arkitektur, Pilot-arkitektur/Pilot 1)
+- 6 utdaterte EN-filer oppdatert: `om-dette-nettstedet`, `hvordan-bidra`, `teknisk-dokumentasjon/_index`, `kjente-problemer`, `github-auth-uavhengig-av-cms`, `arkitektur/_index`
+- Feil i NB fikset: «vis»→«via», «GitHub Pages»→«Cloudflare Pages» i `om-dette-nettstedet`
+
+---
+
 ## Konvensjoner
 
 - **Commit-meldinger:** Skrives på norsk (se git-historikken for stil)

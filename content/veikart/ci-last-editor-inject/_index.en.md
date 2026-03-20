@@ -5,7 +5,7 @@ linkTitle: "CI: last_editor for all edit channels"
 weight: 75
 status: "New"
 last_editor: erikhag1git (Erik Hagen)
-lastmod: 2026-03-20T00:00:00+01:00
+lastmod: 2026-03-20T09:42:59+01:00
 
 ---
 

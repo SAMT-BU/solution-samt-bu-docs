@@ -1,14 +1,12 @@
 ---
 id: b8bf5c67-7a5f-4de5-a3f4-232e7e60e725
-title: "Dokumentasjonspraksis"
-linkTitle: "Dokumentasjonspraksis"
+title: Dokumentasjonspraksis
+linkTitle: Dokumentasjonspraksis
 weight: 30
-status: "Tidlig utkast"
-last_editor: erikhag1git (Erik Hagen)
+last_editor: erikhag1git
 lastmod: 2026-03-15T23:49:44+01:00
 
 ---
-
 Vi utvikler beste praksis for dokumentasjon gjennom gode eksempler – ikke ved å låse oss til en rigid mal fra start. Denne siden samler erfaringer og mønstre etter hvert som de trer frem.
 
 ## Tilnærming
@@ -22,7 +20,7 @@ Første eksempel på dette mønsteret: [Legg til underkapittel – valg i Endre-
 Brukes for veikart-elementer og andre valg der det er nyttig å dokumentere *hvorfor*, ikke bare *hva*.
 
 | Kapittel | Innhold |
-|----------|---------|
+| --- | --- |
 | **Bakgrunn** | Behovet som skal løses – kort og konkret |
 | **Valgt løsning** | Hva vi har bestemt oss for, inkl. gjenstående arbeid |
 | **Alternativer vurdert** | Andre løsninger som ble vurdert, uten vurdering |

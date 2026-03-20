@@ -10,8 +10,6 @@ lastmod: 2026-03-15T23:49:44+01:00
 
 Chronological log of bugs and issues discovered and resolved during development of SAMT-BU Docs. Each entry documents symptom, root cause, and fix — making it easier to diagnose similar problems in the future.
 
-See the Norwegian version (`_index.nb.md`) for full details. Key entries summarised below.
-
 ---
 
 ## ✅ 2026-03-03: Sidebar menu – inconsistent click behaviour (text vs. arrow)
@@ -102,6 +100,41 @@ Result: arrow click → accordion toggle only; text click → navigates to secti
 git commit --allow-empty -m "Reset Pages"
 git push
 ```
+
+---
+
+## 2026-02-xx: Sidebar icon out of sync with CSS
+
+**Symptom:** The active page showed `fa-caret-right` (closed) instead of `fa-sort-down` (open) in the sidebar.
+
+**Root cause:** `menu.html` was missing the condition `eq .RelPermalink $currentNode.RelPermalink` in the icon logic. `IsAncestor` is only `true` for *ancestors* of the current page, not the page itself. On the active page no condition was met → wrong icon shown, but CSS showed the page as active (out of sync).
+
+**Fix:** Added `eq .RelPermalink $currentNode.RelPermalink` to the condition in `menu.html`. Correct logic: `fa-sort-down` is shown when `IsAncestor` OR `eq .RelPermalink` OR `alwaysopen`.
+
+**Files changed:** `themes/hugo-theme-samt-bu/layouts/partials/menu.html`
+
+---
+
+## ✅ 2026-03-08: solution-samt-bu-docs missing HUGO_MODULE_REPLACEMENTS in CI
+
+**Symptom:** New content pushed to `solution-samt-bu-docs` did not appear on the site even after the CI rebuild ran. Cross-repo triggering worked (rebuild was triggered), but Hugo used the old pinned version of the module.
+
+**Root cause:** `hugo.yml` set `HUGO_MODULE_REPLACEMENTS` only for `team-architecture` and `samt-bu-drafts`. For `solution-samt-bu-docs` no local clone was performed – Hugo used the version pinned in `go.mod`.
+
+**Fix (2026-03-08):** `solution-samt-bu-docs` added in all three places in `samt-bu-docs`:
+1. New `actions/checkout` block in `hugo.yml`
+2. Added to `HUGO_MODULE_REPLACEMENTS` in `hugo.yml`
+3. Added to `MODULE_PATHS` in `inject-lastmod.py`
+
+Push to `solution-samt-bu-docs` → cross-repo trigger → CI clones the latest commit directly. Manual `hugo mod get @latest` is no longer necessary.
+
+> **NOTE – verify next time a new module repo is added:**
+> The setup is confirmed to work for the three current modules, but has not been tested for a fourth. Next time a new module repo is connected to the site, verify that:
+> - The CI build is still green after the new checkout step is added
+> - Content from the new repo actually appears on the site after a push
+> - «Last modified» timestamps display correctly for the new content
+>
+> See the comment block in `hugo.yml` and `inject-lastmod.py` for the pattern (3 steps).
 
 ---
 

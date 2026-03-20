@@ -8,14 +8,13 @@ lastmod: 2026-03-15T23:49:44+01:00
 
 ---
 
-This page documents what is "under the bonnet" of the SAMT-BU platform. The intended audience is developers and architects who need to understand, maintain, or further develop the solution.
+This page documents what is "under the bonnet" of the SAMT-BU platform. The intended audience is developers and architects who need to understand, maintain, or further develop the solution – including AI assistants such as Claude Code.
 
-## Planned content
+## Contents
 
-- **Hugo architecture** – theme (submodule), configuration, bilingual setup, layout model
-- **Decap CMS** – portal structure, OAuth flow, configuration, i18n handling
-- **Hugo Modules** – content modules, mounting pattern, Go module configuration
-- **CI/CD pipeline** – GitHub Actions workflow, inject-lastmod, UUID handling
-- **Cloudflare Worker** – OAuth proxy, deployment, maintenance
+- **Known issues and solutions** – bug log with symptom, root cause, and fix
+- **CI/CD pipeline** – GitHub Actions workflow, inject-lastmod, cross-repo triggering
+- **GitHub structure** – concept for organising GitHub organisations and repos (`samt-x` as platform org, project orgs for content)
+- **Developer notes and Claude context** – architectural decisions, conventions, theme.css pitfalls, and context for new developers and AI assistants
 
-> **Note:** This chapter is under development.
+Topics covered in Developer notes: Hugo architecture, theme (submodule), 3-column layout, Hugo Modules, CI/CD pipeline, Cloudflare Worker OAuth proxy, search system.

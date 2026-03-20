@@ -2101,22 +2101,26 @@ Sesjon 18 innførte følgende på toppen av baseline (alle testet og bekreftet o
 3. **Én funksjon om gangen** – test og verifiser før neste.
 4. **Alltid manuelt (ikke cherry-pick)** – unngår uønskede kontekstlinjer.
 
-### Gjenstående kandidater (i prioritert rekkefølge)
+### ✅ Alle kandidater innarbeidet (sesjon 18–19)
 
-| # | Tema-commit | Dato/tid | Beskrivelse | Kompleksitet | Avhengighet |
-|---|-------------|----------|-------------|--------------|-------------|
-| 2 | `d803dbd` | 17.03 15:52 | **Fix: «Endre i GitHub»-lenke riktig repo for modulinnhold** | Lav | Ingen |
-| 5 | `21e31d6`+`2f47835`+`18dac02`+`7f6e059` | 17.03 23:32–00:24 | **Slett-dialog: UX-forbedringer** (tittel via data-attributt, px-fonter, tekstpresiseringer, steg-2 skjules) | Middels | Ingen |
-| 6 | (flere) | 17.03 22:50 | **Rekursiv sletting av undermapper med to-stegs bekreftelse** | Høy | Kandidat 5 |
-| 7 | `05e3468`+`2619ff9`+`ff56c61` | 18.03 00:59–01:36 | **`last_editor`: konsistent visning, fiks ukjent navn og GitInfo-fallback** | Lav–middels | Ingen |
-| 8 | `4fa231e` | 18.03 11:07 | **Fix: `createQeCommit` viser riktig feilmelding ved API-feil** | Lav | Ingen |
-| 9 | `ca36bf7`→`b309330` | 18.03 20:09–22:28 | **Font-fikser: DIN→Arial, bold !important, margin-bottom ul** | Lav | Ingen |
-| 10 | – (hugo.yml) | 18.03 22:07 | **CI: retry-løkke for wrangler deploy** | Lav | Ingen (kun hugo.yml) |
+| # | Tema-commit (ny) | Beskrivelse | Status |
+|---|-----------------|-------------|--------|
+| 1 | `74ac24b` | Mine/Alle-faner + tidsstempel i byggehistorikk | ✅ sesjon 18 |
+| 2 | `0f48f71`+`733ce00`+`a74773b` | Fix: «Endre i GitHub»-lenke riktig repo + last_editor-bonus | ✅ sesjon 19 |
+| 3 | `491770a` | `cache: no-store` i createFilesInOneCommit + deleteFilesInOneCommit | ✅ sesjon 18 |
+| 4 | `ee813df` | Felles pending-indikator for ny side og sletting | ✅ sesjon 18 |
+| 5+6 | `dac996a` | Slett-dialog UX + rekursiv sletting (to-stegs, deleteDirectoryRecursive) | ✅ sesjon 19 (utest) |
+| 7 | `0f48f71`+`733ce00` | `last_editor`: konsistent visning, GitHub API-oppslag | ✅ sesjon 19 |
+| 8 | `3d3ae27` | createQeCommit: brukervennlig feilmelding ved konflikter | ✅ sesjon 19 |
+| 9 | (se sesjon 18) | Font-fikser: DIN→Arial, bold !important, margin-bottom ul | ✅ sesjon 18 |
+| 10 | – (hugo.yml) | CI retry-løkke for wrangler deploy (lå allerede i hugo.yml) | ✅ sesjon 19 |
 
 **Bevisst utelatt (CF-avhengige, ikke aktuelle):**
 - `9e7721c`–`67567db`: CF Pages ETag-polling, SHA-basert deteksjon, `waitForCfCheckRun`.
 
-**Adaptivt poll-intervall** – `d58a7c6` – CF-agnostisk, kan vurderes senere.
+**Adaptivt poll-intervall** – `d58a7c6` – CF-agnostisk, kan vurderes som fremtidig forbedring.
+
+**Nåværende tema-HEAD:** `3d3ae27` (2026-03-20)
 
 ### Fremgangsmåte
 
@@ -2126,6 +2130,46 @@ For hver kandidat:
 3. Bygg lokalt med `hugo server` og verifiser
 4. Commit i temaet → push → oppdater submodule-peker i `samt-bu-docs` → push
 5. Observer bygg og oppførsel på `samt-bu-docs.pages.dev`
+
+---
+
+## Endringslogg – 2026-03-20 (sesjon 19)
+
+### Rekonstruksjon fullført – kandidater #2, #5+#6, #7, #8, #9, #10
+
+Startet fra baseline `916251e` (sesjon 18). Alle gjenstående kandidater innarbeidet manuelt og pushet.
+
+**Kandidat #2 – Fix: «Endre i GitHub»-lenke riktig repo (`footer.html`)**
+- `hasPrefix`-routing i `footer.html`: `teams/team-architecture/`, `teams/team-semantics/`, `utkast/`, `loesninger/cms-loesninger/samt-bu-docs/` → korrekt repo-URL
+- Alle andre sider: fallback til `$Site.Params.editURL` som før
+- Tema-commit: `0f48f71`
+
+**Bonus til #7 – fullt navn fra GitHub API + last_editor ved ny side**
+- `header.html`: `data-editor-login`-attributt på redaktør-span; strip av gamle `(ukjent navn)`-verdier
+- `footer.html` (JS): `fetch('https://api.github.com/users/' + login)` → oppdaterer span med fullt navn (ingen token nødvendig)
+- `custom-footer.html`: `last_editor` skrives til frontmatter ved opprettelse av ny side
+- `custom-footer.html`: editorValue-logikk: `login (Fullt navn)` hvis navn finnes, ellers bare `login`
+- Tema-commits: `733ce00`, `a74773b`
+
+**Kandidat #5+#6 kombinert – Slett-dialog UX + rekursiv sletting**
+- `edit-switcher.html`: tittel via `data-del-title` (unngår HTML-encoding), `{{ len .Pages }}` sendes som `childCount`
+- `edit-switcher.html`: ny dialog-HTML (520px, 8px radius) med `del-children-warning`, `del-footnote`, `del-confirm-section-2`; font-størrelse px (ikke rem – unngår 10px-arv)
+- `custom-footer.html`: `openDeleteDialog` tar nå `childCount`; to-stegs flyt (`showStep2()`, `doCommit()`); `deleteDirectoryRecursive()` via GitHub Trees API
+- `showBuildPanel()` skjuler `del-confirm-section-2`
+- Tema-commit: `dac996a`
+
+**Kandidat #8 – createQeCommit: brukervennlig feilmelding**
+- «Update is not a fast forward» → «Konflikt: siden ble endret av andre. Prøv igjen.» (nb) / «Conflict: page was changed by others. Try again.» (en)
+- Tema-commit: `3d3ae27`
+
+**Kandidat #9** – Innarbeidet sesjon 18 (DIN→Arial @font-face, margin-bottom ul)
+
+**Kandidat #10 – CI retry-løkke for wrangler deploy**
+- Lå allerede i `hugo.yml` (retry-løkke med 3 forsøk, 15 sek mellom)
+- Ingen endring nødvendig
+
+**Viktig lært mønster – font-size rem i dialogen:**
+`1rem` i dette temaet arver ~10px fra HTML-roten (ikke 16px som normalt). Bruk alltid eksplisitte px-verdier i dialoger og overlays.
 
 ---
 

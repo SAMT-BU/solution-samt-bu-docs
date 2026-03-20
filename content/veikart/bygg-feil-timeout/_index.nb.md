@@ -3,9 +3,9 @@ id: 2f548bce-3bc1-4603-806b-ff0347a5bdf5
 title: "Falsk «Build job failed» ved lange byggejobber"
 linkTitle: "Falsk byggefeil ved timeout"
 weight: 85
-status: "Ny"
-lastmod: 2026-03-18T20:37:02+01:00
-last_editor: Erik Hagen
+status: "Godkjent"
+lastmod: 2026-03-21T00:00:00+01:00
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 
@@ -42,7 +42,19 @@ Erstatt timeout-logikken med en direkte sjekk mot GitHub Actions API. Rapporter 
 
 Fjern maksimumsgrensen helt og stol utelukkende på GitHub API-polling (`checkCompletions()` / `startGhPoll()`). ETag-poll er kun for å oppdage at siden faktisk er oppdatert – ikke for å detektere feil.
 
+## Implementert (2026-03-21) – tema-commit `414fa54`
+
+**ETag-poll (redigering, 180s grense):** Ved timeout kaller nå polleren GitHub Actions API og sjekker faktisk status:
+- `in_progress` / `queued` → nullstill teller og fortsett ETag-poll
+- `completed/success` → kall `onBuildDone()` direkte
+- `completed/cancelled` → nullstill og vis «Avbrutt – venter på nytt bygg…»
+- `completed/failure` → vis faktisk feilmelding
+
+**URL-poll (ny side, 90s grense):** Samme mønster innført i `startUrlPoll()`. Tar nå valgfri `startTime`-parameter for korrekt run-filtrering; `npPollBuild()` sender `startTime` ved kall.
+
+`_checkingApi`-flagg forhindrer parallelle API-kall mens intervallet fortsetter å kjøre.
+
 ## Relatert
 
-- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html` – `startGhPoll()`, ETag-pollingen, `checkCompletions()`
+- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html` – `startGhPoll()`, `startUrlPoll()`, ETag-pollingen
 - Veikart: [Statusrapportering og bygg-køer](/samt-bu-docs/loesninger/cms-loesninger/samt-bu-docs/veikart/statusrapportering-gui/) – bakgrunn for nåværende polling-arkitektur

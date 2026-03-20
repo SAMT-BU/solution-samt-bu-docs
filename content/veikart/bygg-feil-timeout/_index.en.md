@@ -3,9 +3,9 @@ id: 2f548bce-3bc1-4603-806b-ff0347a5bdf5
 title: "False «Build job failed» on long build jobs"
 linkTitle: "False build failure on timeout"
 weight: 85
-status: "New"
-lastmod: 2026-03-20T09:42:59+01:00
-last_editor: Erik Hagen
+status: "Approved"
+lastmod: 2026-03-21T00:00:00+01:00
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 
@@ -42,7 +42,19 @@ Replace the timeout logic with a direct check against the GitHub Actions API. Re
 
 Remove the maximum limit entirely and rely solely on GitHub API polling (`checkCompletions()` / `startGhPoll()`). ETag polling is only for detecting that the page has actually updated – not for detecting failures.
 
+## Implemented (2026-03-21) – theme commit `414fa54`
+
+**ETag poll (editing, 180s limit):** On timeout, the poller now calls the GitHub Actions API and checks actual status:
+- `in_progress` / `queued` → reset counter and continue ETag polling
+- `completed/success` → call `onBuildDone()` directly
+- `completed/cancelled` → reset and show «Cancelled – waiting for new build…»
+- `completed/failure` → show actual error message
+
+**URL poll (new page, 90s limit):** Same pattern introduced in `startUrlPoll()`. Now accepts an optional `startTime` parameter for correct run filtering; `npPollBuild()` passes `startTime` when calling.
+
+A `_checkingApi` flag prevents concurrent API calls while the interval continues running.
+
 ## Related
 
-- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html` – `startGhPoll()`, ETag polling, `checkCompletions()`
+- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html` – `startGhPoll()`, `startUrlPoll()`, ETag polling
 - Roadmap: [Status reporting and build queues](/samt-bu-docs/loesninger/cms-loesninger/samt-bu-docs/veikart/statusrapportering-gui/) – background on current polling architecture

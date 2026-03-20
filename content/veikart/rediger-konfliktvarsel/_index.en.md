@@ -1,5 +1,5 @@
 ---
-id: 81e22605-0ee5-46a5-8b32-6d6fc089eaea
+id: 6600fd23-52ac-42cd-8a38-0eaa8ef08e51
 title: "Warning on simultaneous editing of the same page"
 linkTitle: "Conflict warning on editing"
 weight: 150

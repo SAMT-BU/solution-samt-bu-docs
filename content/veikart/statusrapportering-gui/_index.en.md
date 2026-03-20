@@ -1,5 +1,5 @@
 ---
-id: 02a47991-62d9-490a-84df-196586fe442e
+id: 1cfce35d-fbef-467a-8853-fff18ae46d28
 title: "Status reporting and GUI for build queues"
 linkTitle: "Status reporting and build queues"
 weight: 130

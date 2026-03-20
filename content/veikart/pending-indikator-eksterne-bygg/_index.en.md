@@ -1,5 +1,5 @@
 ---
-id: 20cfb9f7-3fb0-4179-bda8-5857d4f9c9c2
+id: f2ecebba-c800-416c-94fb-6e32d36576b2
 title: "Pending indicator does not detect builds triggered outside the site editor"
 linkTitle: "Pending indicator: external builds"
 weight: 87

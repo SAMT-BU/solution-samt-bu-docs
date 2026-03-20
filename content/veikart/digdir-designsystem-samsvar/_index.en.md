@@ -1,5 +1,5 @@
 ---
-id: 57d788f6-dbbc-404e-a751-c94cb5daa59f
+id: f92085d2-8bf3-4759-8cc6-1c4439938e71
 title: "Alignment with Digdir's design system"
 linkTitle: "Digdir design system alignment"
 weight: 140

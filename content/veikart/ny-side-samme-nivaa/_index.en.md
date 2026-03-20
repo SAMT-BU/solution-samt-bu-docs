@@ -1,5 +1,5 @@
 ---
-id: 4938fddc-430d-417e-8151-35d652eef96c
+id: 3b8fe53a-65b0-46cd-ad31-ef3847775772
 title: "New page at the same level – option in the Edit menu"
 linkTitle: "New page – same level"
 weight: 20

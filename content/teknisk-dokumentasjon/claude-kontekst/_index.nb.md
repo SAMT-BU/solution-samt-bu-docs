@@ -2246,3 +2246,30 @@ Feilen «Update is not a fast forward» oppstår fordi nettleseren cacher `GET /
 - **URL-poll** (`startUrlPoll`, 90s): Identisk logikk. Funksjonen tar nå valgfri `startTime`-parameter; `npPollBuild()` sender `startTime` ved kall. Fallback: `Date.now() - 120000` (2 min bakover) for kall uten `startTime`.
 
 **Veikart-status:** `bygg-feil-timeout` → Godkjent.
+
+---
+
+## Endringslogg – 2026-03-21 (sesjon 21, del 2)
+
+### Ny funksjon: pending-indikator fanger opp eksternt-trigget bygg
+
+**Tema-commit:** `b600033`
+
+**Problem:** Pending-indikatoren var usynlig for bygg trigget utenfra (lokal push, GitHub web-UI, API). Brukere så idle-tilstand selv om et bygg pågikk, og siden ble ikke automatisk lastet inn ved ferdig bygg.
+
+**Nye globale funksjoner:**
+- `samtuShowExternalBuildIndicator()` – spinner + «Nettstedet oppdateres…» med `opacity:.7`. Bruker `data-external`-attributt (ikke `data-building`) → hindrer ikke bakgrunnspolling og overstyres av eget bygg.
+- `samtuHideExternalBuildIndicator()` – fjerner ekstern-indikatoren.
+
+**Utvidet bakgrunnspolling (bakgrunnspolling-scriptet):**
+- `bgExternalRun` og `bgFastTimer` – nye modulvariabler.
+- `checkExternalBuilds()` – kaller GH Actions API hvert 45. sek (fra bgTimer) når ingen egne bygg pågår og bruker er innlogget. Starter `bgFastTimer` (5s ETag-poll) når aktivt eksternt bygg oppdages.
+- `startBgFastPoll()` / `stopBgFastPoll()` – starter/stopper rask ETag-poll. bgFastTimer auto-laster inn siden ved ETag-endring.
+- bgTimer skiller nå mellom tre tilfeller ved ETag-endring:
+  1. Eget bygg ventende → `samtuDecrementPending()` + reload (som før)
+  2. Eksternt bygg sporet (`bgExternalRun` satt) → `stopBgFastPoll()` + reload (ny)
+  3. Ukjent endring → banner (som før)
+
+**Ingen endring for ikke-innloggede brukere.**
+
+**Veikart-status:** `pending-indikator-externe-bygg` → Godkjent.

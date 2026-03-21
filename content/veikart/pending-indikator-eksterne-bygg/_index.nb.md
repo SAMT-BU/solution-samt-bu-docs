@@ -3,9 +3,9 @@ id: f2ecebba-c800-416c-94fb-6e32d36576b2
 title: "Pending-indikator fanger ikke opp bygg trigget utenfor nettstedets editor"
 linkTitle: "Pending-indikator: eksterne bygg"
 weight: 87
-status: "Ny"
-lastmod: 2026-03-18T20:51:59+01:00
-last_editor: Erik Hagen
+status: "Godkjent"
+lastmod: 2026-03-21T00:00:00+01:00
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 
@@ -39,8 +39,24 @@ Utvid bakgrunnspollingen (som allerede kjøres hvert 45. sek for ETag-endringer)
 
 Brukeren må være innlogget (token tilgjengelig) for at bakgrunnspollingen skal kunne kalle GitHub API. For ikke-innloggede brukere: ingen endring fra dagens oppførsel.
 
+## Implementert (2026-03-21) – tema-commit `b600033`
+
+**Ny funksjon: `checkExternalBuilds()`** kalles fra bakgrunnspollingen hvert 45. sek (når eget bygg ikke pågår og bruker er innlogget):
+
+1. Henter `/actions/workflows/hugo.yml/runs?per_page=3` fra GitHub API
+2. Hvis aktivt bygg (`in_progress`/`queued`) finnes: viser diskret `samtuShowExternalBuildIndicator()` og starter `startBgFastPoll()` (ETag-poll hvert 5. sek)
+3. `bgFastTimer` oppdager ETag-endring → auto-last inn siden (ingen banner)
+4. Hvis bygg er ferdig ved neste bgTimer-tick og `bgExternalRun` er satt: auto-last inn i stedet for banner
+
+**Visuelle detaljer:**
+- Ekstern indikator: spinner + «Nettstedet oppdateres…» med `opacity: .7` (vs. full opasitet for egne bygg)
+- Ekstern indikator bruker `data-external`-attributt, ikke `data-building` → hindrer ikke bakgrunnspolling
+- Ingen fanfare eller lydsignal (stille auto-reload)
+
+**Begrensning (som planlagt):** Krever innlogget bruker (token) for å kalle GitHub API. Ikke-innloggede brukere: uendret oppførsel.
+
 ## Relatert
 
-- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html` – bakgrunnspoll (ETag, hvert 45. sek), `checkCompletions()`, `startGhPoll()`
+- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html` – `checkExternalBuilds()`, `startBgFastPoll()`, `stopBgFastPoll()`, `samtuShowExternalBuildIndicator()`
 - Veikart: [Falsk byggefeil ved timeout](/samt-bu-docs/loesninger/cms-loesninger/samt-bu-docs/veikart/bygg-feil-timeout/) – beslektet GitHub API-polling
 - Veikart: [Statusrapportering og bygg-køer](/samt-bu-docs/loesninger/cms-loesninger/samt-bu-docs/veikart/statusrapportering-gui/) – bakgrunn

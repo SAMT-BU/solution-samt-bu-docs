@@ -66,6 +66,36 @@ New version is live at samt-x.github.io/samt-bu-docs/
 
 You can monitor the build under the **Actions** tab in the GitHub repository. If the build fails (red X), the change has not been published – contact an administrator.
 
+## Build Indicator and Automatic Reload
+
+The site has a built-in build indicator at the bottom left of the page. It shows publishing status after you save a change.
+
+### Your own changes
+
+When you save via the Edit menu (edit, new page, delete), the indicator starts immediately:
+
+| State | What is shown |
+|-------|--------------|
+| Build in progress | Spinner + «1 change building…» (or count if multiple) |
+| Build complete | Checkmark + «Changes published – click to reload» |
+| Build failed | Warning icon + error message |
+
+The page reloads automatically a few seconds after the build finishes. You can click «Reload now» to speed this up.
+
+### Others' changes (external push)
+
+If someone else pushes a change directly to GitHub – via the GitHub website, a local clone, or the API – while you are on the site, the indicator will show this discreetly (slightly more muted than your own changes):
+
+> *Site updating…*
+
+The page reloads automatically when the external build finishes. You don't need to do anything.
+
+**Note:** This feature requires that you are logged in (via the Edit menu). Non-logged-in users will not see the indicator for external builds, but will see a «Page has been updated» banner when an ETag change is detected.
+
+### Build history
+
+Click the indicator (in any state) to open the **Build history** dialog. There you can see all builds – yours and others' – with timestamps, duration and results, split into «Mine» and «All» tabs.
+
 ## The UUID Field – Do Not Touch It
 
 All pages have a hidden `id` field (UUID). It is invisible in the CMS editor (`widget: hidden`) and is set automatically by a GitHub Actions workflow. The UUID is permanent – it links the Norwegian and English versions of the same page and may be used for cross-references.

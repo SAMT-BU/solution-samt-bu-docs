@@ -3,9 +3,9 @@ id: f2ecebba-c800-416c-94fb-6e32d36576b2
 title: "Pending indicator does not detect builds triggered outside the site editor"
 linkTitle: "Pending indicator: external builds"
 weight: 87
-status: "New"
-lastmod: 2026-03-20T09:42:59+01:00
-last_editor: Erik Hagen
+status: "Approved"
+lastmod: 2026-03-21T00:00:00+01:00
+last_editor: erikhag1git (Erik Hagen)
 
 ---
 
@@ -39,8 +39,24 @@ Extend the background polling (which already runs every 45 seconds for ETag chan
 
 The user must be logged in (token available) for the background polling to call the GitHub API. For non-logged-in users: no change from current behaviour.
 
+## Implemented (2026-03-21) – theme commit `b600033`
+
+**New function: `checkExternalBuilds()`** called from background polling every 45 seconds (when no own build is in progress and user is logged in):
+
+1. Fetches `/actions/workflows/hugo.yml/runs?per_page=3` from GitHub API
+2. If an active build (`in_progress`/`queued`) is found: shows a discrete `samtuShowExternalBuildIndicator()` and starts `startBgFastPoll()` (ETag poll every 5 seconds)
+3. `bgFastTimer` detects ETag change → auto-reloads the page (no banner)
+4. If build is complete by the next bgTimer tick and `bgExternalRun` is set: auto-reloads instead of showing banner
+
+**Visual details:**
+- External indicator: spinner + «Site updating…» with `opacity: .7` (vs. full opacity for own builds)
+- External indicator uses `data-external` attribute, not `data-building` → does not block background polling
+- No fanfare or sound signal (silent auto-reload)
+
+**Limitation (as planned):** Requires a logged-in user (token) to call the GitHub API. Non-logged-in users: unchanged behaviour.
+
 ## Related
 
-- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html` – background poll (ETag, every 45 sec), `checkCompletions()`, `startGhPoll()`
+- `themes/hugo-theme-samt-bu/layouts/partials/custom-footer.html` – `checkExternalBuilds()`, `startBgFastPoll()`, `stopBgFastPoll()`, `samtuShowExternalBuildIndicator()`
 - Roadmap: [False build failure on timeout](/samt-bu-docs/loesninger/cms-loesninger/samt-bu-docs/veikart/bygg-feil-timeout/) – related GitHub API polling
 - Roadmap: [Status reporting and build queues](/samt-bu-docs/loesninger/cms-loesninger/samt-bu-docs/veikart/statusrapportering-gui/) – background

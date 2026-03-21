@@ -66,6 +66,36 @@ Ny versjon er live på samt-x.github.io/samt-bu-docs/
 
 Du kan følge med på byggingen under **Actions**-fanen i GitHub-repoet. Hvis bygget feiler (rød X), er ikke endringen publisert – ta kontakt med en administrator.
 
+## Byggindikator og automatisk oppdatering
+
+Nettstedet har en innebygd byggindikator nede til venstre på siden. Den viser status på publiseringen etter at du har lagret en endring.
+
+### Egne endringer
+
+Når du lagrer via Endre-menyen (rediger, ny side, slett), starter indikatoren umiddelbart:
+
+| Tilstand | Hva vises |
+|----------|-----------|
+| Bygg pågår | Spinner + «1 endring bygges…» (eller antall hvis flere) |
+| Bygg ferdig | Hake + «Endringer publisert – klikk for å laste inn» |
+| Bygg feilet | Advarselikon + feilmelding |
+
+Siden lastes automatisk inn noen sekunder etter at bygget er ferdig. Du kan klikke «Last inn nå» for å fremskynde det.
+
+### Andres endringer (ekstern push)
+
+Hvis noen andre pusher en endring direkte til GitHub – via GitHub-nettstedet, lokal klon eller API – mens du er inne på nettstedet, vil indikatoren vise dette diskret (litt mer dempet enn egne endringer):
+
+> *Nettstedet oppdateres…*
+
+Siden lastes automatisk inn når det eksterne bygget er ferdig. Du trenger ikke gjøre noe.
+
+**Merk:** Denne funksjonen krever at du er innlogget (via Endre-menyen). Ikke-innloggede brukere ser ikke indikatoren for eksterne bygg, men vil se et «Siden er oppdatert»-banner ved ETag-endring.
+
+### Byggehistorikk
+
+Klikk på indikatoren (uansett tilstand) for å åpne **Byggehistorikk**-dialogen. Der ser du alle bygg – egne og andres – med tidsstempel, varighet og resultat, fordelt på «Mine» og «Alle»-faner.
+
 ## UUID-feltet – ikke rør det
 
 Alle sider har et skjult `id`-felt (UUID). Det er usynlig i CMS-editoren (`widget: hidden`) og settes automatisk av en GitHub Actions-workflow. UUID-en er permanent – den kobler norsk og engelsk versjon av samme side og brukes eventuelt for kryssreferanser.
